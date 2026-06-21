@@ -5,8 +5,13 @@
   "scripts": {
     "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||''; const exec=process.env.npm_execpath||''; if(!ua.startsWith('pnpm/')&&!exec.includes('pnpm')){console.error('Use pnpm instead'); process.exit(1)}\"",
     "dev:lotto": "node ./scripts/dev-lotto.mjs",
+    "dev:ebay": "corepack pnpm --filter @workspace/ebay-description run dev",
+    "update:lotto-data": "node ./scripts/update-lotto-data.mjs",
+    "deploy:lotto:ci": "node ./scripts/ci-update-and-deploy.mjs",
     "build:lotto": "node ./scripts/build-lotto.mjs",
-    "deploy:firebase": "corepack pnpm run build:lotto && firebase deploy --only hosting",
+    "build:ebay": "node ./scripts/build-ebay.mjs",
+    "deploy:firebase": "corepack pnpm run build:lotto && firebase deploy --only hosting:lotto,firestore:rules",
+    "deploy:ebay": "corepack pnpm run build:ebay && firebase deploy --only hosting:ebay",
     "build": "corepack pnpm run typecheck && corepack pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "corepack pnpm run typecheck:libs && corepack pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

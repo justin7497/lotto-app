@@ -1,0 +1,114 @@
+# 매주 토요일 추첨(약 20:45 KST) 후 자동으로 당첨번호를 갱신하고 Firebase에 배포합니다.
+#
+# 필요한 GitHub Secrets (Settings > Secrets and variables > Actions):
+#   FIREBASE_TOKEN      - firebase login:ci 로 발급
+#   LOTTO_APP_ENV       - artifacts/lotto-app/.env.local 전체 내용 (VITE_FIREBASE_* 포함)
+#
+# 수동 실행: Actions 탭 > Update Lotto Data & Deploy > Run workflow
+
+name: Update Lotto Data & Deploy
+
+on:
+  schedule:
+    # 토요 21:30 KST (추첨 후 여유) = 12:30 UTC
+    - cron: "30 12 * * 6"
+    # 일요 21:00 KST 재시도 (API 지연 대비) = 12:00 UTC
+    - cron: "0 12 * * 0"
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: "새 회차 없어도 빌드·배포"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-lotto-data
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Write Firebase env
+        env:
+          LOTTO_APP_ENV: ${{ secrets.LOTTO_APP_ENV }}
+        run: |
+          if [ -z "$LOTTO_APP_ENV" ]; then
+            echo "::error::LOTTO_APP_ENV secret is not set. Paste artifacts/lotto-app/.env.local contents into GitHub Secrets."
+            exit 1
+          fi
+          printf '%s\n' "$LOTTO_APP_ENV" > artifacts/lotto-app/.env.local
+
+      - name: Update lotto data
+        id: update
+        run: node scripts/update-lotto-data.mjs
+
+      - name: Check data changes
+        id: changes
+        run: |
+          if git diff --quiet -- artifacts/lotto-app/src/data/lottoData.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No new lotto rounds in JSON."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- artifacts/lotto-app/src/data/lottoData.json
+          fi
+
+      - name: Commit updated data
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/lotto-app/src/data/lottoData.json
+          git commit -m "chore: update lotto data to latest draw"
+          git push
+
+      - name: Build and deploy
+        if: >-
+          steps.changes.outputs.changed == 'true' ||
+          github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true'
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PORT: "5173"
+          BASE_PATH: "/"
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::error::FIREBASE_TOKEN secret is not set. Run 'firebase login:ci' locally and add the token."
+            exit 1
+          fi
+          corepack pnpm run build:lotto
+          npx firebase-tools@14.12.0 deploy --only hosting:lotto,firestore:rules --project lotto-app-ljh --non-interactive
+
+      - name: Skip deploy (already up to date)
+        if: >-
+          steps.changes.outputs.changed != 'true' &&
+          !(github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true')
+        run: echo "Already up to date. Deploy skipped."
