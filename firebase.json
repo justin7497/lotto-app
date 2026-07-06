@@ -1,16 +1,42 @@
 {
-  "hosting": {
-    "public": "artifacts/lotto-app/dist/public",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": [
+    {
+      "target": "lotto",
+      "public": "artifacts/lotto-app/dist/public",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "headers": [
+        {
+          "source": "site.webmanifest",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/manifest+json"
+            }
+          ]
+        },
+        {
+          "source": "lotto-sync.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ]
 }

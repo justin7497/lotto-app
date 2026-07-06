@@ -3,6 +3,9 @@
 # 필요한 GitHub Secrets (Settings > Secrets and variables > Actions):
 #   FIREBASE_TOKEN      - firebase login:ci 로 발급
 #   LOTTO_APP_ENV       - artifacts/lotto-app/.env.local 전체 내용 (VITE_FIREBASE_* 포함)
+#   FIREBASE_SERVICE_ACCOUNT_JSON - 당첨 알림용 Firebase Admin 서비스 계정 JSON
+#   RESEND_API_KEY      - 당첨 알림 이메일 발송 (Resend)
+#   RESEND_FROM_EMAIL   - 발신 이메일 주소 (선택)
 #
 # 수동 실행: Actions 탭 > Update Lotto Data & Deploy > Run workflow
 
@@ -10,9 +13,13 @@ name: Update Lotto Data & Deploy
 
 on:
   schedule:
-    # 토요 21:30 KST (추첨 후 여유) = 12:30 UTC
-    - cron: "30 12 * * 6"
-    # 일요 21:00 KST 재시도 (API 지연 대비) = 12:00 UTC
+    # 토요 20:50 KST = 11:50 UTC
+    - cron: "50 11 * * 6"
+    # 토요 21:00 KST = 12:00 UTC
+    - cron: "0 12 * * 6"
+    # 토요 21:15 KST = 12:15 UTC (API 지연 대비)
+    - cron: "15 12 * * 6"
+    # 일요 21:00 KST 재시도 = 12:00 UTC
     - cron: "0 12 * * 0"
   workflow_dispatch:
     inputs:
@@ -62,10 +69,10 @@ jobs:
           LOTTO_APP_ENV: ${{ secrets.LOTTO_APP_ENV }}
         run: |
           if [ -z "$LOTTO_APP_ENV" ]; then
-            echo "::error::LOTTO_APP_ENV secret is not set. Paste artifacts/lotto-app/.env.local contents into GitHub Secrets."
-            exit 1
+            echo "::warning::LOTTO_APP_ENV secret is not set. Build may fail if Firebase env is required."
+          else
+            printf '%s\n' "$LOTTO_APP_ENV" > artifacts/lotto-app/.env.local
           fi
-          printf '%s\n' "$LOTTO_APP_ENV" > artifacts/lotto-app/.env.local
 
       - name: Update lotto data
         id: update
@@ -91,6 +98,15 @@ jobs:
           git commit -m "chore: update lotto data to latest draw"
           git push
 
+      - name: Notify winners
+        if: steps.changes.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+        run: node scripts/notify-winners.mjs
+
       - name: Build and deploy
         if: >-
           steps.changes.outputs.changed == 'true' ||
@@ -104,8 +120,42 @@ jobs:
             echo "::error::FIREBASE_TOKEN secret is not set. Run 'firebase login:ci' locally and add the token."
             exit 1
           fi
+
+          if [ -f scripts/write-lotto-sync.mjs ]; then
+            node scripts/write-lotto-sync.mjs
+          else
+            node --input-type=module -e "
+              import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+              import { dirname, resolve } from 'node:path';
+              const dataPath = resolve('artifacts/lotto-app/src/data/lottoData.json');
+              const outPath = resolve('artifacts/lotto-app/public/lotto-sync.json');
+              const rows = JSON.parse(readFileSync(dataPath, 'utf8'));
+              const latestDrwNo = Math.max(...rows.map((r) => r.drwNo));
+              const rounds = rows.filter((r) => r.drwNo >= latestDrwNo - 59);
+              mkdirSync(dirname(outPath), { recursive: true });
+              writeFileSync(outPath, JSON.stringify({ updatedAt: new Date().toISOString(), latestDrwNo, rounds }, null, 2) + '\n');
+              console.log('Wrote lotto-sync.json (latest ' + latestDrwNo + '회)');
+            "
+          fi
+
           corepack pnpm run build:lotto
-          npx firebase-tools@14.12.0 deploy --only hosting:lotto,firestore:rules --project lotto-app-ljh --non-interactive
+
+          DEPLOY_ONLY="hosting"
+          if [ -f firestore.rules ]; then
+            if node --input-type=module -e "
+              import { readFileSync } from 'node:fs';
+              const cfg = JSON.parse(readFileSync('firebase.json', 'utf8'));
+              const hasLottoTarget = Array.isArray(cfg.hosting) && cfg.hosting.some((h) => h.target === 'lotto');
+              process.exit(hasLottoTarget ? 0 : 1);
+            "; then
+              DEPLOY_ONLY="hosting:lotto,firestore:rules"
+            else
+              DEPLOY_ONLY="hosting,firestore:rules"
+            fi
+          fi
+
+          echo "Deploying: $DEPLOY_ONLY"
+          npx firebase-tools@14.12.0 deploy --only "$DEPLOY_ONLY" --project lotto-app-ljh --non-interactive
 
       - name: Skip deploy (already up to date)
         if: >-

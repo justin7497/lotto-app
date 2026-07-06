@@ -1,18 +1,22 @@
-import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Shuffle, Scale, Brain, Share2, Download, RotateCcw,
-  Plus, Minus, Bookmark, CheckCircle2, ChevronDown, ChevronUp, X, FlaskConical, Printer,
-  Layers, Zap, Activity, LayoutGrid, Hash, Link2,
+  Share2, Download, RotateCcw,
+  Plus, Minus, Bookmark, CheckCircle2, ChevronDown, ChevronUp, X,
+  Layers, Zap, BookOpen,
 } from "lucide-react";
 import LottoBall from "@/components/LottoBall";
+import LottoPickButton from "@/components/LottoPickButton";
+import { getBallSolidColor } from "@/utils/lottoBallColors";
+import MobileSlipQr from "@/components/MobileSlipQr";
+import GeneratorGuideSheet from "@/components/GeneratorGuideSheet";
+import ModeGuidePanel from "@/components/ModeGuidePanel";
+import StoreQrButton from "@/components/StoreQrButton";
+import { BULK_MODES, MODE_INFO, SINGLE_MODES, type SingleGeneratorMode } from "@/data/generatorModes";
 import { useLottoContext } from "@/context/LottoDataContext";
 import { generateMultiple, calcAC } from "@/utils/generator";
 import { saveNumberSets, isDuplicateNumberSets, loadSavedSets, getRoundTag } from "@/utils/savedNumbers";
 import type { SavedSet } from "@/utils/savedNumbers";
-import { printLottoNumbers } from "@/utils/printLotto";
-import PrintPreview from "@/components/PrintPreview";
-import type { PrintCalibration } from "@/utils/printCalibration";
 import { getFrequency, getRecentTrend, getNumbers } from "@/utils/analysis";
 import type { GeneratedNumbers, GeneratorMode, LottoRound } from "@/data/types";
 
@@ -68,99 +72,6 @@ const AUTO_PRESETS: {
   },
 ];
 
-const BULK_MODES: GeneratorMode[] = ["balanced", "weighted", "monte", "delta", "sector", "tail", "consecutive"];
-
-const MODE_INFO = {
-  balanced: {
-    icon: Scale,
-    label: "균형 필터",
-    desc: "합계·홀짝·고저 비율 최적화",
-    color: "from-emerald-400 to-emerald-600",
-    active: "bg-emerald-500 text-white border-emerald-500",
-    inactive: "bg-white text-emerald-600 border-emerald-200 hover:border-emerald-400",
-    tabColor: "text-emerald-600 border-emerald-500 bg-emerald-50",
-    badgeColor: "bg-emerald-100 text-emerald-700",
-  },
-  weighted: {
-    icon: Brain,
-    label: "AI 가중치",
-    desc: "최근 200회 빈도 높은 번호 우선",
-    color: "from-violet-400 to-violet-600",
-    active: "bg-violet-500 text-white border-violet-500",
-    inactive: "bg-white text-violet-600 border-violet-200 hover:border-violet-400",
-    tabColor: "text-violet-600 border-violet-500 bg-violet-50",
-    badgeColor: "bg-violet-100 text-violet-700",
-  },
-  monte: {
-    icon: FlaskConical,
-    label: "몬테카를로",
-    desc: "15만 회 시뮬레이션 최상위 조합",
-    color: "from-amber-400 to-orange-500",
-    active: "bg-amber-500 text-white border-amber-500",
-    inactive: "bg-white text-amber-600 border-amber-200 hover:border-amber-400",
-    tabColor: "text-amber-600 border-amber-500 bg-amber-50",
-    badgeColor: "bg-amber-100 text-amber-700",
-  },
-  random: {
-    icon: Shuffle,
-    label: "순수 랜덤",
-    desc: "완전한 무작위 추첨",
-    color: "from-rose-400 to-rose-600",
-    active: "bg-rose-500 text-white border-rose-500",
-    inactive: "bg-white text-rose-600 border-rose-200 hover:border-rose-400",
-    tabColor: "text-rose-600 border-rose-500 bg-rose-50",
-    badgeColor: "bg-rose-100 text-rose-700",
-  },
-  delta: {
-    icon: Activity,
-    label: "델타 시스템",
-    desc: "역대 번호 간격 패턴 기반 생성",
-    color: "from-teal-400 to-cyan-500",
-    active: "bg-teal-500 text-white border-teal-500",
-    inactive: "bg-white text-teal-600 border-teal-200 hover:border-teal-400",
-    tabColor: "text-teal-600 border-teal-500 bg-teal-50",
-    badgeColor: "bg-teal-100 text-teal-700",
-  },
-  sector: {
-    icon: LayoutGrid,
-    label: "구간 분산",
-    desc: "5개 구간 골고루 1개 이상 선택",
-    color: "from-sky-400 to-blue-500",
-    active: "bg-sky-500 text-white border-sky-500",
-    inactive: "bg-white text-sky-600 border-sky-200 hover:border-sky-400",
-    tabColor: "text-sky-600 border-sky-500 bg-sky-50",
-    badgeColor: "bg-sky-100 text-sky-700",
-  },
-  tail: {
-    icon: Hash,
-    label: "끝수 기반",
-    desc: "끝자리 최대 다양성 조합 구성",
-    color: "from-pink-400 to-fuchsia-500",
-    active: "bg-pink-500 text-white border-pink-500",
-    inactive: "bg-white text-pink-600 border-pink-200 hover:border-pink-400",
-    tabColor: "text-pink-600 border-pink-500 bg-pink-50",
-    badgeColor: "bg-pink-100 text-pink-700",
-  },
-  consecutive: {
-    icon: Link2,
-    label: "연번 기반",
-    desc: "연속 번호 쌍 1개 이상 포함",
-    color: "from-lime-400 to-green-500",
-    active: "bg-lime-500 text-white border-lime-500",
-    inactive: "bg-white text-lime-600 border-lime-200 hover:border-lime-400",
-    tabColor: "text-lime-600 border-lime-500 bg-lime-50",
-    badgeColor: "bg-lime-100 text-lime-700",
-  },
-} as const;
-
-function getBallBg(n: number): string {
-  if (n <= 10) return "#F59E0B";
-  if (n <= 20) return "#3B82F6";
-  if (n <= 30) return "#EF4444";
-  if (n <= 40) return "#6B7280";
-  return "#22C55E";
-}
-
 interface BulkResult {
   mode: GeneratorMode;
   sets: GeneratedNumbers[];
@@ -173,7 +84,7 @@ export default function Generator() {
 
   const [viewMode, setViewMode] = useState<"single" | "bulk">("single");
 
-  const [mode, setMode] = useState<GeneratorMode>("balanced");
+  const [mode, setMode] = useState<SingleGeneratorMode>("balanced");
   const [count, setCount] = useState(5);
   const [results, setResults] = useState<GeneratedNumbers[]>([]);
   const [generating, setGenerating] = useState(false);
@@ -206,9 +117,9 @@ export default function Generator() {
   const [activeTab, setActiveTab] = useState<GeneratorMode>("balanced");
   const [bulkSavingAll, setBulkSavingAll] = useState(false);
   const [bulkSaveAllDone, setBulkSaveAllDone] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showBulkPreview, setShowBulkPreview] = useState(false);
-  const [bulkPrintSets, setBulkPrintSets] = useState<GeneratedNumbers[]>([]);
+  const [slipQr, setSlipQr] = useState<{ numberSets: number[][]; title: string } | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
+  const [bulkFocusMode, setBulkFocusMode] = useState<SingleGeneratorMode>("balanced");
 
   useEffect(() => {
     loadSavedSets().then(setExistingSets);
@@ -277,14 +188,18 @@ export default function Generator() {
       const dup = await isDuplicateNumberSets(generated, existingSets);
       setIsDuplicate(dup);
       setGenerating(false);
+      if (generated.length > 0) {
+        setSlipQr({ numberSets: generated.map((r) => r.numbers), title: "추천 번호" });
+      }
     }, 400);
   }
 
   async function handleSave() {
     if (results.length === 0 || saved || isDuplicate) return;
-    const newSet = await saveNumberSets(results, computeSubLabel());
+    const result = await saveNumberSets(results, computeSubLabel());
+    if (!result.ok) return;
     setSaved(true);
-    setExistingSets((prev) => [newSet, ...prev]);
+    setExistingSets((prev) => [result.set, ...prev]);
   }
 
   function handleBulkGenerate() {
@@ -314,7 +229,7 @@ export default function Generator() {
     for (const r of bulkResults) {
       if (r.saved || r.isDuplicate) continue;
       const s = await saveNumberSets(r.sets, subLabel);
-      newSets.push(s);
+      if (s.ok) newSets.push(s.set);
     }
     setBulkResults((prev) => prev.map((r) => ({ ...r, saved: !r.isDuplicate })));
     setExistingSets((prev) => [...newSets, ...prev]);
@@ -326,9 +241,10 @@ export default function Generator() {
     const r = bulkResults.find((b) => b.mode === m);
     if (!r || r.saved || r.isDuplicate) return;
     const subLabel = computeSubLabel();
-    const newSet = await saveNumberSets(r.sets, subLabel);
+    const result = await saveNumberSets(r.sets, subLabel);
+    if (!result.ok) return;
     setBulkResults((prev) => prev.map((b) => b.mode === m ? { ...b, saved: true } : b));
-    setExistingSets((prev) => [newSet, ...prev]);
+    setExistingSets((prev) => [result.set, ...prev]);
   }
 
   async function handleShare() {
@@ -449,24 +365,23 @@ export default function Generator() {
                     );
                   })}
                 </div>
-                <div className="grid grid-cols-9 gap-1.5">
-                  {Array.from({ length: 45 }, (_, i) => i + 1).map((n) => {
-                    const isExcluded = excluded.has(n);
-                    const bg = getBallBg(n);
-                    return (
-                      <button key={n} onClick={() => toggleExclude(n)}
-                        style={isExcluded ? {} : { backgroundColor: bg }}
-                        className={`aspect-square rounded-full text-xs font-bold transition-all flex items-center justify-center ${isExcluded ? "bg-gray-100 text-gray-300 line-through ring-2 ring-red-200" : "text-white hover:opacity-80 active:scale-95"}`}
-                      >{n}</button>
-                    );
-                  })}
+                <div className="grid grid-cols-9 gap-2">
+                  {Array.from({ length: 45 }, (_, i) => i + 1).map((n) => (
+                    <LottoPickButton
+                      key={n}
+                      number={n}
+                      excluded={excluded.has(n)}
+                      onClick={() => toggleExclude(n)}
+                    />
+                  ))}
                 </div>
                 {excluded.size > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {Array.from(excluded).sort((a, b) => a - b).map((n) => (
-                      <button key={n} onClick={() => toggleExclude(n)} style={{ backgroundColor: getBallBg(n) }}
-                        className="flex items-center gap-1 text-white text-xs font-bold px-2 py-0.5 rounded-full hover:opacity-80"
-                      >{n} <X className="w-2.5 h-2.5" /></button>
+                      <button key={n} onClick={() => toggleExclude(n)}
+                        className="flex items-center gap-1 text-white text-sm font-extrabold px-2.5 py-1 rounded-full hover:brightness-110 shadow-sm ring-2 ring-white/50"
+                        style={{ backgroundColor: getBallSolidColor(n) }}
+                      >{n} <X className="w-3 h-3" /></button>
                     ))}
                   </div>
                 )}
@@ -543,47 +458,67 @@ export default function Generator() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-8">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">번호 생성기</h2>
+    <div className="max-w-5xl mx-auto px-4 py-6 pb-28">
+      <div className="mb-5">
+        <p className="text-sm font-semibold text-amber-600 mb-1">{getRoundTag()}</p>
+        <h2 className="text-2xl font-extrabold text-gray-950 flex items-center gap-2">
+          <Zap className="w-6 h-6 text-amber-500" />
+          번호 추천
+        </h2>
+        <p className="text-base text-gray-600 mt-1.5 leading-relaxed">
+          8가지 통계 방식 · 개별 또는 일괄 생성
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowGuide(true)}
+          className="mt-3 inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-base font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+        >
+          <BookOpen className="w-5 h-5" />
+          추천 설명 보기
+        </button>
+      </div>
+
+      <GeneratorGuideSheet open={showGuide} onClose={() => setShowGuide(false)} />
 
       <div className="flex gap-2 mb-5 bg-gray-100 p-1 rounded-xl">
         <button
           onClick={() => setViewMode("single")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-base font-semibold transition-all ${
             viewMode === "single" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          <Zap className="w-4 h-4" />개별 생성
+          <Zap className="w-5 h-5" />개별 생성
         </button>
         <button
           onClick={() => setViewMode("bulk")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-base font-semibold transition-all ${
             viewMode === "bulk" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          <Layers className="w-4 h-4" />일괄 생성
+          <Layers className="w-5 h-5" />일괄 생성
         </button>
       </div>
 
       <AnimatePresence mode="wait">
         {viewMode === "single" ? (
           <motion.div key="single" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              {(Object.keys(MODE_INFO) as GeneratorMode[]).map((m) => {
+            <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 mb-3">
+              {SINGLE_MODES.map((m) => {
                 const info = MODE_INFO[m];
                 const Icon = info.icon;
                 const isActive = mode === m;
                 return (
                   <button key={m} onClick={() => setMode(m)}
-                    className={`border-2 rounded-2xl p-3 sm:p-4 transition-all text-left ${isActive ? info.active : info.inactive}`}
+                    className={`border-2 rounded-xl p-2.5 sm:p-3 transition-all text-center min-h-[72px] flex flex-col items-center justify-center gap-1 ${isActive ? info.active : info.inactive}`}
                   >
-                    <Icon className="w-5 h-5 mb-1.5" />
+                    <Icon className="w-5 h-5" />
                     <div className="font-semibold text-sm leading-tight">{info.label}</div>
-                    <div className={`text-xs mt-1 leading-snug ${isActive ? "text-white/80" : "text-gray-400"}`}>{info.desc}</div>
                   </button>
                 );
               })}
             </div>
+
+            <ModeGuidePanel mode={mode} className="mb-5" />
 
             {FiltersPanel}
 
@@ -658,29 +593,34 @@ export default function Generator() {
                     <p className="text-[10px] text-gray-300 text-center mt-4">※ 통계 기반 분석이며 당첨을 보장하지 않습니다.</p>
                   </div>
 
-                  <div className="flex gap-3 mb-3">
+                  <div className="space-y-3 mb-3">
+                    <StoreQrButton
+                      onClick={() =>
+                        setSlipQr({
+                          numberSets: results.map((r) => r.numbers),
+                          title: "추천 번호",
+                        })
+                      }
+                    />
                     <button onClick={handleSave} disabled={saved || isDuplicate}
-                      className={`flex-1 py-3 rounded-xl border font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${
+                      className={`w-full py-3.5 rounded-xl border font-semibold text-base flex items-center justify-center gap-2 transition-colors ${
                         saved ? "border-emerald-200 text-emerald-600 bg-emerald-50 cursor-default"
                           : isDuplicate ? "border-gray-200 text-gray-400 bg-gray-50 cursor-default"
                           : "border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
                       }`}
                     >
-                      {saved ? <><CheckCircle2 className="w-4 h-4" />저장 완료!</>
-                        : isDuplicate ? <><CheckCircle2 className="w-4 h-4" />이미 저장된 번호입니다</>
-                        : <><Bookmark className="w-4 h-4" />이 번호 저장하기</>
+                      {saved ? <><CheckCircle2 className="w-5 h-5" />저장 완료!</>
+                        : isDuplicate ? <><CheckCircle2 className="w-5 h-5" />이미 저장된 번호입니다</>
+                        : <><Bookmark className="w-5 h-5" />추출번호에 저장</>
                       }
                     </button>
                   </div>
-                  <div className="flex gap-3">
-                    <button onClick={handleShare} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
-                      <Share2 className="w-4 h-4" />공유하기
+                  <div className="flex gap-3 flex-wrap">
+                    <button onClick={handleShare} className="flex-1 min-w-[120px] py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-base flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+                      <Share2 className="w-5 h-5" />공유하기
                     </button>
-                    <button onClick={handleSaveImage} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
-                      <Download className="w-4 h-4" />이미지 저장
-                    </button>
-                    <button onClick={() => setShowPreview(true)} className="flex-1 py-3 rounded-xl border border-amber-300 text-amber-700 bg-amber-50 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors">
-                      <Printer className="w-4 h-4" />미리보기·인쇄
+                    <button onClick={handleSaveImage} className="flex-1 min-w-[120px] py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold text-base flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+                      <Download className="w-5 h-5" />이미지 저장
                     </button>
                   </div>
                 </motion.div>
@@ -689,19 +629,31 @@ export default function Generator() {
           </motion.div>
         ) : (
           <motion.div key="bulk" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-            <div className="space-y-3 mb-4">
+            <div className="space-y-2 mb-3">
               {BULK_MODES.map((m) => {
                 const info = MODE_INFO[m];
                 const Icon = info.icon;
+                const isFocused = bulkFocusMode === m;
                 return (
-                  <div key={m} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 flex items-center gap-4">
-                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${info.color} flex items-center justify-center shrink-0`}>
-                      <Icon className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm">{info.label}</p>
-                      <p className="text-xs text-gray-400 truncate">{info.desc}</p>
-                    </div>
+                  <div
+                    key={m}
+                    className={`bg-white rounded-2xl border shadow-sm px-4 py-3 flex items-center gap-3 transition-colors ${
+                      isFocused ? "border-amber-300 ring-1 ring-amber-200" : "border-gray-100"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setBulkFocusMode(m)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    >
+                      <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${info.color} flex items-center justify-center shrink-0`}>
+                        <Icon className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-base">{info.label}</p>
+                        <p className="text-sm text-gray-500 truncate">{info.desc}</p>
+                      </div>
+                    </button>
                     <div className="flex items-center gap-2 shrink-0">
                       <button onClick={() => setBulkCounts((prev) => ({ ...prev, [m]: Math.max(1, prev[m] - 1) }))}
                         className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50"
@@ -716,6 +668,8 @@ export default function Generator() {
                 );
               })}
             </div>
+
+            <ModeGuidePanel mode={bulkFocusMode} className="mb-4" />
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4 flex items-center justify-between">
               <span className="text-sm font-semibold text-amber-800">
@@ -746,6 +700,16 @@ export default function Generator() {
             <AnimatePresence>
               {bulkResults.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                  <StoreQrButton
+                    className="mb-3"
+                    onClick={() => {
+                      const allSets = bulkResults.flatMap((r) => r.sets);
+                      setSlipQr({
+                        numberSets: allSets.map((s) => s.numbers),
+                        title: `일괄 생성 ${totalBulkGames}게임`,
+                      });
+                    }}
+                  />
                   <button
                     onClick={handleBulkSaveAll}
                     disabled={bulkSavingAll || bulkAllSaved || bulkSaveAllDone}
@@ -762,21 +726,11 @@ export default function Generator() {
                     ) : bulkSavingAll ? (
                       <><div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />저장 중...</>
                     ) : (
-                      <><Bookmark className="w-4 h-4" />{totalBulkGames}게임 전체 저장하기</>
+                      <><Bookmark className="w-4 h-4" />{totalBulkGames}게임 추출번호에 저장</>
                     )}
                   </button>
-                  <button
-                    onClick={() => {
-                      setBulkPrintSets(bulkResults.flatMap(r => r.sets));
-                      setShowBulkPreview(true);
-                    }}
-                    className="w-full py-3 rounded-xl border border-orange-300 text-orange-700 bg-orange-50 font-semibold text-sm flex items-center justify-center gap-2 mb-4 hover:bg-orange-100 transition-colors"
-                  >
-                    <Printer className="w-4 h-4" />전체 인쇄 ({totalBulkGames}게임)
-                  </button>
-
                   <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-                    {bulkResults.map((r) => {
+                  {bulkResults.map((r) => {
                       const info = MODE_INFO[r.mode];
                       const Icon = info.icon;
                       const isActive = activeTab === r.mode;
@@ -842,10 +796,19 @@ export default function Generator() {
                             })}
                           </div>
                         </div>
+                        <StoreQrButton
+                          className="mb-2"
+                          onClick={() => {
+                            setSlipQr({
+                              numberSets: r.sets.map((s) => s.numbers),
+                              title: `${info.label} 번호`,
+                            });
+                          }}
+                        />
                         <button
                           onClick={() => handleBulkSaveSingle(r.mode)}
                           disabled={r.saved || r.isDuplicate}
-                          className={`w-full py-2.5 rounded-xl border font-semibold text-sm flex items-center justify-center gap-2 mb-2 transition-colors ${
+                          className={`w-full py-2.5 rounded-xl border font-semibold text-sm flex items-center justify-center gap-2 mb-4 transition-colors ${
                             r.saved ? "border-emerald-200 text-emerald-600 bg-emerald-50 cursor-default"
                               : r.isDuplicate ? "border-gray-200 text-gray-400 bg-gray-50 cursor-default"
                               : "border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
@@ -853,17 +816,8 @@ export default function Generator() {
                         >
                           {r.saved ? <><CheckCircle2 className="w-4 h-4" />저장 완료!</>
                             : r.isDuplicate ? <><CheckCircle2 className="w-4 h-4" />이미 저장된 번호입니다</>
-                            : <><Bookmark className="w-4 h-4" />{info.label} 저장하기</>
+                            : <><Bookmark className="w-4 h-4" />{info.label} 추출번호에 저장</>
                           }
-                        </button>
-                        <button
-                          onClick={() => {
-                            setBulkPrintSets(r.sets);
-                            setShowBulkPreview(true);
-                          }}
-                          className="w-full py-2.5 rounded-xl border border-orange-300 text-orange-700 bg-orange-50 font-semibold text-sm flex items-center justify-center gap-2 mb-4 hover:bg-orange-100 transition-colors"
-                        >
-                          <Printer className="w-4 h-4" />{info.label} 인쇄 ({r.sets.length}게임)
                         </button>
                       </motion.div>
                     );
@@ -875,27 +829,12 @@ export default function Generator() {
         )}
       </AnimatePresence>
 
-      {showPreview && (
-        <PrintPreview
-          sets={results.map(r => r.numbers)}
-          onClose={() => setShowPreview(false)}
-          onPrint={(cal: PrintCalibration) => {
-            setShowPreview(false);
-            printLottoNumbers(results, getRoundTag(), cal);
-          }}
-        />
-      )}
-
-      {showBulkPreview && (
-        <PrintPreview
-          sets={bulkPrintSets.map(s => s.numbers)}
-          onClose={() => setShowBulkPreview(false)}
-          onPrint={(cal: PrintCalibration) => {
-            setShowBulkPreview(false);
-            printLottoNumbers(bulkPrintSets, getRoundTag(), cal);
-          }}
-        />
-      )}
+      <MobileSlipQr
+        numberSets={slipQr?.numberSets ?? []}
+        open={slipQr !== null}
+        onClose={() => setSlipQr(null)}
+        title={slipQr?.title ?? "번호 QR"}
+      />
     </div>
   );
 }

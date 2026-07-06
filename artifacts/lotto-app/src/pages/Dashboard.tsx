@@ -3,35 +3,13 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, RefreshCw, ChevronRight, AlertCircle, Bookmark, Clock } from "lucide-react";
 import LottoBall from "@/components/LottoBall";
+import WinBadge, { WinPendingBadge } from "@/components/WinBadge";
+import QrPromoBanner from "@/components/QrPromoBanner";
 import { useLottoContext } from "@/context/LottoDataContext";
 import { getNumbers, getFrequency, getRecentTrend } from "@/utils/analysis";
 import { loadSavedSets, parseRoundNo, checkWinResult } from "@/utils/savedNumbers";
-import type { SavedSet, WinResult } from "@/utils/savedNumbers";
+import type { SavedSet } from "@/utils/savedNumbers";
 import type { LottoRound } from "@/data/types";
-
-const RANK_STYLE: Record<string, string> = {
-  "1": "bg-yellow-400 text-yellow-900 border-yellow-500",
-  "2": "bg-orange-400 text-white border-orange-500",
-  "3": "bg-purple-500 text-white border-purple-600",
-  "4": "bg-blue-400 text-white border-blue-500",
-  "5": "bg-emerald-400 text-white border-emerald-500",
-};
-
-function WinBadge({ result }: { result: WinResult }) {
-  if (result.rank === null) {
-    return (
-      <span className="text-[10px] font-medium text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5 whitespace-nowrap">
-        낙첨
-      </span>
-    );
-  }
-  const style = RANK_STYLE[String(result.rank)] ?? "bg-gray-100 text-gray-600";
-  return (
-    <span className={`text-[10px] font-bold border rounded-full px-2 py-0.5 whitespace-nowrap ${style}`}>
-      {result.label}
-    </span>
-  );
-}
 
 function SavedNumbersPreview({ sets, roundMap }: { sets: SavedSet[]; roundMap: Map<number, LottoRound> }) {
   const preview = sets.slice(0, 2);
@@ -41,10 +19,10 @@ function SavedNumbersPreview({ sets, roundMap }: { sets: SavedSet[]; roundMap: M
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Bookmark className="w-4 h-4 text-amber-500" />
-          <h3 className="font-semibold text-gray-800">최근 저장 번호 당첨 결과</h3>
+          <h3 className="font-semibold text-gray-800">최근 추출 번호 당첨 결과</h3>
         </div>
-        <Link href="/my-numbers" className="text-amber-500 text-sm font-medium flex items-center gap-1 hover:text-amber-600">
-          나의 번호 <ChevronRight className="w-4 h-4" />
+        <Link href="/extracted" className="text-amber-500 text-sm font-medium flex items-center gap-1 hover:text-amber-600">
+          추출 번호 <ChevronRight className="w-4 h-4" />
         </Link>
       </div>
 
@@ -75,23 +53,27 @@ function SavedNumbersPreview({ sets, roundMap }: { sets: SavedSet[]; roundMap: M
                   {saved.sets.map((s, idx) => {
                     const result = round ? checkWinResult(s.numbers, round) : null;
                     return (
-                      <div key={idx} className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-gray-300 w-4 text-right shrink-0">{idx + 1}</span>
-                        <div className="flex gap-1 flex-wrap">
-                          {s.numbers.map((n, i) => {
-                            const isMatch = winningSet ? winningSet.has(n) : false;
-                            return (
-                              <div key={i} className={`rounded-full transition-all ${isMatch ? "ring-2 ring-offset-1 ring-yellow-400" : ""}`}>
-                                <LottoBall number={n} size="sm" />
-                              </div>
-                            );
-                          })}
+                      <div key={idx} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <span className="text-sm font-bold text-gray-400 w-6 text-right shrink-0 pt-1">{idx + 1}</span>
+                          <div className="flex gap-1.5 flex-wrap flex-1 min-w-0">
+                            {s.numbers.map((n, i) => {
+                              const isMatch = winningSet ? winningSet.has(n) : false;
+                              return (
+                                <div key={i} className={`rounded-full transition-all ${isMatch ? "ring-2 ring-offset-1 sm:ring-offset-2 ring-yellow-400" : ""}`}>
+                                  <LottoBall number={n} size="responsive" />
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                        {result ? (
-                          <WinBadge result={result} />
-                        ) : (
-                          <span className="text-[10px] text-gray-300">결과 대기 중</span>
-                        )}
+                        <div className="pl-8 sm:pl-0 sm:shrink-0">
+                          {result ? (
+                            <WinBadge result={result} className="w-full sm:w-auto justify-center sm:justify-start" />
+                          ) : (
+                            <WinPendingBadge className="w-full sm:w-auto justify-center sm:justify-start" />
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -135,7 +117,7 @@ export default function Dashboard() {
   const recent5 = useMemo(() => [...allRounds].sort((a, b) => b.drwNo - a.drwNo).slice(0, 5), [allRounds]);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 pb-20 sm:pb-6">
+    <div className="max-w-5xl mx-auto px-4 py-6 pb-24">
       {/* Status bar */}
       {(status === "loading" || updateMsg) && (
         <div className={`mb-4 flex items-center gap-2 text-sm rounded-lg px-3 py-2 border ${
@@ -154,6 +136,8 @@ export default function Dashboard() {
         </div>
       )}
 
+      <QrPromoBanner />
+
       {/* Latest draw */}
       {latestRound && (
         <motion.div
@@ -163,11 +147,11 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-amber-500 text-sm font-medium">최신 당첨번호</p>
-              <p className="text-gray-900 font-bold text-2xl">{latestRound.drwNo}회차</p>
-              <p className="text-gray-400 text-xs mt-0.5">{latestRound.drwNoDate}</p>
+              <p className="text-amber-600 text-base font-semibold">최신 당첨번호</p>
+              <p className="text-gray-900 font-bold text-3xl">{latestRound.drwNo}회차</p>
+              <p className="text-gray-500 text-sm mt-1">{latestRound.drwNoDate}</p>
             </div>
-            <div className="bg-amber-500 rounded-xl px-3 py-1.5 text-xs font-semibold text-white">1등 당첨</div>
+            <div className="bg-amber-500 rounded-xl px-3.5 py-2 text-sm font-semibold text-white">1등 당첨</div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {getNumbers(latestRound).map((n, i) => (
@@ -176,7 +160,7 @@ export default function Dashboard() {
             <span className="text-gray-300 text-xl font-light mx-1">+</span>
             <LottoBall number={latestRound.bnusNo} size="xl" isBonus animate delay={0.5} />
           </div>
-          <p className="text-gray-400 text-xs mt-3">보너스 번호 (금테 표시)</p>
+          <p className="text-gray-500 text-sm mt-3">보너스 번호 (금테 표시)</p>
         </motion.div>
       )}
 
@@ -258,6 +242,24 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* 분석·검증 바로가기 */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <Link
+          href="/analysis"
+          className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:border-amber-200 transition-colors"
+        >
+          <p className="text-sm font-semibold text-gray-800">번호 분석</p>
+          <p className="text-xs text-gray-400 mt-1">출현 빈도·통계 보기</p>
+        </Link>
+        <Link
+          href="/backtest"
+          className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:border-amber-200 transition-colors"
+        >
+          <p className="text-sm font-semibold text-gray-800">전략 검증</p>
+          <p className="text-xs text-gray-400 mt-1">과거 데이터 백테스트</p>
+        </Link>
       </div>
 
       {/* Disclaimer */}

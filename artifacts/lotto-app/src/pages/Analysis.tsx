@@ -56,7 +56,7 @@ export default function Analysis() {
   ] as const;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 pb-20 sm:pb-6">
+    <div className="max-w-5xl mx-auto px-4 py-6 pb-24">
       <h2 className="text-xl font-bold text-gray-900 mb-4">통계 분석</h2>
       {status === "loading" && (
         <p className="text-amber-600 text-sm mb-4">데이터 업데이트 중...</p>

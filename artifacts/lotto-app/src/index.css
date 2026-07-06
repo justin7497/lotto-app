@@ -153,6 +153,28 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground text-base leading-relaxed overflow-x-hidden;
+  }
+}
+
+@layer components {
+  /* 중장년층 가독성: 본문 작은 글자 한 단계씩 확대 */
+  .senior-readable .text-\[10px\],
+  .senior-readable .text-\[11px\] {
+    @apply text-sm leading-snug;
+  }
+
+  .senior-readable .text-xs {
+    @apply text-sm leading-snug;
+  }
+
+  .senior-readable .text-sm {
+    @apply text-base leading-relaxed;
+  }
+
+  .senior-readable input,
+  .senior-readable select,
+  .senior-readable textarea {
+    @apply text-base;
   }
 }

@@ -167,7 +167,7 @@ export default function Backtest() {
     : [];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-8">
+    <div className="max-w-5xl mx-auto px-4 py-6 pb-24">
       <div className="flex items-center gap-2 mb-1">
         <Trophy className="w-5 h-5 text-amber-500" />
         <h2 className="text-xl font-bold text-gray-900">전략 검증</h2>

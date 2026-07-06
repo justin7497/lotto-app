@@ -1,33 +1,41 @@
 import { motion } from "framer-motion";
+import { getBallGradientClasses } from "@/utils/lottoBallColors";
 
 interface LottoBallProps {
   number: number;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "responsive";
   isBonus?: boolean;
+  highlight?: boolean;
   delay?: number;
   animate?: boolean;
 }
 
-function getBallColor(num: number): string {
-  if (num <= 10) return "from-yellow-400 to-yellow-500 shadow-yellow-300";
-  if (num <= 20) return "from-blue-400 to-blue-500 shadow-blue-300";
-  if (num <= 30) return "from-red-400 to-red-500 shadow-red-300";
-  if (num <= 40) return "from-gray-500 to-gray-700 shadow-gray-400";
-  return "from-green-400 to-green-600 shadow-green-300";
-}
-
 function getSizeClasses(size: string): string {
   switch (size) {
-    case "sm": return "w-8 h-8 text-xs font-bold";
-    case "md": return "w-10 h-10 text-sm font-bold";
-    case "lg": return "w-12 h-12 text-base font-bold";
-    case "xl": return "w-16 h-16 text-xl font-bold";
-    default: return "w-10 h-10 text-sm font-bold";
+    case "sm":
+      return "w-9 h-9 text-sm font-extrabold";
+    case "md":
+      return "w-11 h-11 text-base font-extrabold";
+    case "responsive":
+      return "w-9 h-9 sm:w-11 sm:h-11 text-sm sm:text-base font-extrabold";
+    case "lg":
+      return "w-[3.25rem] h-[3.25rem] text-lg font-extrabold";
+    case "xl":
+      return "w-[4.5rem] h-[4.5rem] text-2xl font-extrabold";
+    default:
+      return "w-11 h-11 text-base font-extrabold";
   }
 }
 
-export default function LottoBall({ number, size = "md", isBonus = false, delay = 0, animate = false }: LottoBallProps) {
-  const colorClass = getBallColor(number);
+export default function LottoBall({
+  number,
+  size = "md",
+  isBonus = false,
+  highlight = false,
+  delay = 0,
+  animate = false,
+}: LottoBallProps) {
+  const colorClass = getBallGradientClasses(number);
   const sizeClass = getSizeClasses(size);
 
   const ball = (
@@ -36,13 +44,15 @@ export default function LottoBall({ number, size = "md", isBonus = false, delay 
         ${sizeClass}
         rounded-full bg-gradient-to-br ${colorClass}
         flex items-center justify-center text-white
-        shadow-md
-        ${isBonus ? "ring-2 ring-amber-400" : ""}
-        relative select-none
+        shadow-[0_3px_8px_rgba(0,0,0,0.28)]
+        ring-2 ring-white/70
+        ${highlight ? "ring-[3px] ring-violet-400 ring-offset-2 ring-offset-white" : ""}
+        ${isBonus ? "ring-amber-400 ring-[3px]" : ""}
+        relative select-none shrink-0
       `}
     >
-      <span className="relative z-10 drop-shadow-sm">{number}</span>
-      <div className="absolute top-1.5 left-2 w-2 h-1 bg-white/30 rounded-full rotate-[-30deg]" />
+      <span className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]">{number}</span>
+      <div className="absolute top-[18%] left-[22%] w-[28%] h-[14%] bg-white/35 rounded-full rotate-[-25deg]" />
     </div>
   );
 

@@ -7,6 +7,7 @@
     "dev:lotto": "node ./scripts/dev-lotto.mjs",
     "dev:ebay": "corepack pnpm --filter @workspace/ebay-description run dev",
     "update:lotto-data": "node ./scripts/update-lotto-data.mjs",
+    "notify:winners": "node ./scripts/notify-winners.mjs",
     "deploy:lotto:ci": "node ./scripts/ci-update-and-deploy.mjs",
     "build:lotto": "node ./scripts/build-lotto.mjs",
     "build:ebay": "node ./scripts/build-ebay.mjs",

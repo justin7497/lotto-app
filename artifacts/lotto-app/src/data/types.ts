@@ -17,6 +17,15 @@ export interface GeneratedNumbers {
   bonus?: number;
   mode: GeneratorMode;
   acValue?: number;
+  score?: number;
+  summary?: string;
+  lottokingDetail?: {
+    overlap: number;
+    repeatFromLast: number[];
+    consecutiveRanges: string[];
+    consecutivePairCount: number;
+    maxRun: number;
+  };
 }
 
 export type GeneratorMode =
@@ -27,7 +36,9 @@ export type GeneratorMode =
   | "delta"
   | "sector"
   | "tail"
-  | "consecutive";
+  | "consecutive"
+  | "lottoking"
+  | "saju";
 
 export interface FrequencyData {
   number: number;

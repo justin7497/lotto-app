@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "lotto-app-ljh"
+  },
+  "targets": {
+    "lotto-app-ljh": {
+      "hosting": {
+        "lotto": [
+          "lotto-app-ljh"
+        ]
+      }
+    }
   }
 }
