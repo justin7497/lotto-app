@@ -58,8 +58,9 @@ async function main() {
   }
 
   run("corepack pnpm run build:lotto");
+  run("node scripts/verify-lotto-sync.mjs");
   run(
-    "npx firebase-tools deploy --only hosting:lotto,firestore:rules --project lotto-app-ljh --non-interactive",
+    "npx firebase-tools deploy --only hosting:lotto,functions,firestore:rules --project lotto-app-ljh --non-interactive",
   );
 
   console.log(`Deploy complete. Latest round: ${afterMax}회`);

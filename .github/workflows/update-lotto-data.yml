@@ -19,6 +19,10 @@ on:
     - cron: "0 12 * * 6"
     # 토요 21:15 KST = 12:15 UTC (API 지연 대비)
     - cron: "15 12 * * 6"
+    # 토요 22:00 KST = 13:00 UTC (Actions 지연·API 지연 대비)
+    - cron: "0 13 * * 6"
+    # 일요 09:00 KST 재시도 = 00:00 UTC
+    - cron: "0 0 * * 0"
     # 일요 21:00 KST 재시도 = 12:00 UTC
     - cron: "0 12 * * 0"
   workflow_dispatch:
@@ -42,7 +46,7 @@ concurrency:
 jobs:
   update-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -76,7 +80,11 @@ jobs:
 
       - name: Update lotto data
         id: update
-        run: node scripts/update-lotto-data.mjs
+        run: |
+          node scripts/update-lotto-data.mjs | tee /tmp/update-lotto.log
+          LATEST=$(node -e "const r=require('./artifacts/lotto-app/src/data/lottoData.json'); console.log(Math.max(...r.map(x=>x.drwNo)))")
+          echo "latest_drw_no=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Latest round in lottoData.json: ${LATEST}회"
 
       - name: Check data changes
         id: changes
@@ -107,6 +115,11 @@ jobs:
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
         run: node scripts/notify-winners.mjs
 
+      - name: Typecheck lotto app
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: corepack pnpm --filter @workspace/lotto-app run typecheck
+
       - name: Build and deploy
         if: >-
           steps.changes.outputs.changed == 'true' ||
@@ -115,46 +128,22 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           PORT: "5173"
           BASE_PATH: "/"
+          LATEST_DRW_NO: ${{ steps.update.outputs.latest_drw_no }}
         run: |
           if [ -z "$FIREBASE_TOKEN" ]; then
             echo "::error::FIREBASE_TOKEN secret is not set. Run 'firebase login:ci' locally and add the token."
             exit 1
           fi
 
-          if [ -f scripts/write-lotto-sync.mjs ]; then
-            node scripts/write-lotto-sync.mjs
-          else
-            node --input-type=module -e "
-              import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-              import { dirname, resolve } from 'node:path';
-              const dataPath = resolve('artifacts/lotto-app/src/data/lottoData.json');
-              const outPath = resolve('artifacts/lotto-app/public/lotto-sync.json');
-              const rows = JSON.parse(readFileSync(dataPath, 'utf8'));
-              const latestDrwNo = Math.max(...rows.map((r) => r.drwNo));
-              const rounds = rows.filter((r) => r.drwNo >= latestDrwNo - 59);
-              mkdirSync(dirname(outPath), { recursive: true });
-              writeFileSync(outPath, JSON.stringify({ updatedAt: new Date().toISOString(), latestDrwNo, rounds }, null, 2) + '\n');
-              console.log('Wrote lotto-sync.json (latest ' + latestDrwNo + '회)');
-            "
-          fi
-
           corepack pnpm run build:lotto
+          node scripts/verify-lotto-sync.mjs
 
-          DEPLOY_ONLY="hosting"
+          DEPLOY_ONLY="hosting:lotto,functions"
           if [ -f firestore.rules ]; then
-            if node --input-type=module -e "
-              import { readFileSync } from 'node:fs';
-              const cfg = JSON.parse(readFileSync('firebase.json', 'utf8'));
-              const hasLottoTarget = Array.isArray(cfg.hosting) && cfg.hosting.some((h) => h.target === 'lotto');
-              process.exit(hasLottoTarget ? 0 : 1);
-            "; then
-              DEPLOY_ONLY="hosting:lotto,firestore:rules"
-            else
-              DEPLOY_ONLY="hosting,firestore:rules"
-            fi
+            DEPLOY_ONLY="hosting:lotto,functions,firestore:rules"
           fi
 
-          echo "Deploying: $DEPLOY_ONLY"
+          echo "Deploying round ${LATEST_DRW_NO:-?}회: $DEPLOY_ONLY"
           npx firebase-tools@14.12.0 deploy --only "$DEPLOY_ONLY" --project lotto-app-ljh --non-interactive
 
       - name: Skip deploy (already up to date)

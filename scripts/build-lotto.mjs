@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -20,6 +20,40 @@ try {
 } catch {
 }
 
+for (const script of [
+  "write-lotto-sync.mjs",
+  "write-lotto-prizes-sync.mjs",
+  "write-lotto-stores-sync.mjs",
+  "verify-lotto-sync.mjs",
+  "optimize-illustrations.mjs",
+]) {
+  const sync = spawnSync(process.execPath, [resolve(`scripts/${script}`)], {
+    stdio: "inherit",
+  });
+  if (sync.status !== 0) {
+    process.exit(sync.status ?? 1);
+  }
+}
+
+const typecheck = spawnSync(
+  pnpmCommand,
+  ["pnpm", "--filter", "@workspace/lotto-app", "run", "typecheck"],
+  {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+    env: {
+      ...process.env,
+      ...lottoEnv,
+      NODE_OPTIONS: process.env.NODE_OPTIONS || "--max-old-space-size=8192",
+      PORT: process.env.PORT || "5173",
+      BASE_PATH: process.env.BASE_PATH || "/",
+    },
+  },
+);
+if (typecheck.status !== 0) {
+  process.exit(typecheck.status ?? 1);
+}
+
 const child = spawn(
   pnpmCommand,
   ["pnpm", "--filter", "@workspace/lotto-app", "run", "build"],
@@ -29,6 +63,7 @@ const child = spawn(
     env: {
       ...process.env,
       ...lottoEnv,
+      NODE_OPTIONS: process.env.NODE_OPTIONS || "--max-old-space-size=8192",
       PORT: process.env.PORT || "5173",
       BASE_PATH: process.env.BASE_PATH || "/",
     },

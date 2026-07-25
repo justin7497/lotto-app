@@ -1,0 +1,15 @@
+{
+  "name": "lotto-functions",
+  "private": true,
+  "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "lint": "echo \"No lint configured\""
+  },
+  "dependencies": {
+    "firebase-functions": "^6.6.0"
+  }
+}
