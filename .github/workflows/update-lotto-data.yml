@@ -115,6 +115,12 @@ jobs:
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
         run: node scripts/notify-winners.mjs
 
+      - name: Install functions dependencies
+        if: >-
+          steps.changes.outputs.changed == 'true' ||
+          github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true'
+        run: npm ci --prefix functions
+
       - name: Typecheck lotto app
         env:
           NODE_OPTIONS: --max-old-space-size=8192

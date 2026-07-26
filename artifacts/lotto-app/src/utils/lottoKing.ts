@@ -119,14 +119,22 @@ export function analyzeLottoKingWindow(rounds: LottoRound[], windowSize = 20): L
   };
 }
 
-export function getCoverageStats(results: GeneratedNumbers[]): { coveragePct: number; uniqueCount: number } {
+export function getCoverageStats(results: GeneratedNumbers[]): {
+  coveragePct: number;
+  uniqueCount: number;
+  coveredCount: number;
+  missing: number[];
+} {
   const unique = new Set<number>();
   for (const r of results) {
     for (const n of r.numbers) unique.add(n);
   }
+  const missing = Array.from({ length: 45 }, (_, i) => i + 1).filter((n) => !unique.has(n));
   return {
     uniqueCount: unique.size,
+    coveredCount: unique.size,
     coveragePct: Math.round((unique.size / 45) * 100),
+    missing,
   };
 }
 

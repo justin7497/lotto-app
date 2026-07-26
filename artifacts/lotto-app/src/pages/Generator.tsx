@@ -73,7 +73,7 @@ const AUTO_PRESETS: {
 ];
 
 interface BulkResult {
-  mode: GeneratorMode;
+  mode: SingleGeneratorMode;
   sets: GeneratedNumbers[];
   saved: boolean;
   isDuplicate: boolean;
@@ -102,7 +102,7 @@ export default function Generator() {
   const [sameTailFilter, setSameTailFilter] = useState(false);
   const [consecutiveFilter, setConsecutiveFilter] = useState(false);
 
-  const [bulkCounts, setBulkCounts] = useState<Record<GeneratorMode, number>>({
+  const [bulkCounts, setBulkCounts] = useState<Record<SingleGeneratorMode, number>>({
     balanced: 20,
     weighted: 15,
     monte: 15,
@@ -114,7 +114,7 @@ export default function Generator() {
   });
   const [bulkResults, setBulkResults] = useState<BulkResult[]>([]);
   const [bulkGenerating, setBulkGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<GeneratorMode>("balanced");
+  const [activeTab, setActiveTab] = useState<SingleGeneratorMode>("balanced");
   const [bulkSavingAll, setBulkSavingAll] = useState(false);
   const [bulkSaveAllDone, setBulkSaveAllDone] = useState(false);
   const [slipQr, setSlipQr] = useState<{ numberSets: number[][]; title: string } | null>(null);
@@ -237,7 +237,7 @@ export default function Generator() {
     setBulkSaveAllDone(true);
   }
 
-  async function handleBulkSaveSingle(m: GeneratorMode) {
+  async function handleBulkSaveSingle(m: SingleGeneratorMode) {
     const r = bulkResults.find((b) => b.mode === m);
     if (!r || r.saved || r.isDuplicate) return;
     const subLabel = computeSubLabel();

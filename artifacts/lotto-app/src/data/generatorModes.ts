@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { GeneratorMode } from "@/data/types";
 
-export const SINGLE_MODES: GeneratorMode[] = [
+export const SINGLE_MODES = [
   "balanced",
   "weighted",
   "monte",
@@ -20,9 +20,11 @@ export const SINGLE_MODES: GeneratorMode[] = [
   "sector",
   "tail",
   "consecutive",
-];
+] as const;
 
-export const BULK_MODES: GeneratorMode[] = [
+export type SingleGeneratorMode = (typeof SINGLE_MODES)[number];
+
+export const BULK_MODES: SingleGeneratorMode[] = [
   "balanced",
   "weighted",
   "monte",
@@ -44,10 +46,7 @@ export interface GeneratorModeInfo {
   badgeColor: string;
 }
 
-export const MODE_INFO: Record<
-  "balanced" | "weighted" | "monte" | "random" | "delta" | "sector" | "tail" | "consecutive",
-  GeneratorModeInfo
-> = {
+export const MODE_INFO: Record<SingleGeneratorMode, GeneratorModeInfo> = {
   balanced: {
     icon: Scale,
     label: "균형 필터",
@@ -145,4 +144,3 @@ export const MODE_INFO: Record<
   },
 };
 
-export type SingleGeneratorMode = keyof typeof MODE_INFO;

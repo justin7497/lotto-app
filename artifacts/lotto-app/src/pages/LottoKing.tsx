@@ -338,7 +338,7 @@ export default function LottoKing() {
                 const detail = r.lottokingDetail;
                 const repeatSet = new Set(detail?.repeatFromLast ?? []);
                 const prev2Set = new Set(detail?.repeatFromPrev2 ?? []);
-                const isCover = r.mode === "cover";
+                const isCover = r.summary?.includes("커버") ?? false;
                 return (
                   <div
                     key={idx}
@@ -382,7 +382,7 @@ export default function LottoKing() {
                         <span>
                           2회전 반복:{" "}
                           <span className="font-medium text-orange-600">
-                            {detail.repeatFromPrev2.length > 0 ? detail.repeatFromPrev2.join(", ") : "없음"}
+                            {detail.repeatFromPrev2 && detail.repeatFromPrev2.length > 0 ? detail.repeatFromPrev2.join(", ") : "없음"}
                           </span>
                         </span>
                         <span>

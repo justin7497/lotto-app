@@ -2,9 +2,9 @@ import type { LottoRound, LottoNumbers, GeneratorMode } from "@/data/types";
 import { generateMultiple } from "./generator";
 import { getNumbers } from "./analysis";
 
-export const BACKTEST_MODES: GeneratorMode[] = [
+export const BACKTEST_MODES = [
   "balanced", "weighted", "delta", "sector", "tail", "consecutive", "monte",
-];
+] as const;
 
 export const BACKTEST_MODE_LABELS: Record<string, string> = {
   balanced: "균형 필터",

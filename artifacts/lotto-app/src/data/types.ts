@@ -10,6 +10,28 @@ export interface LottoRound {
   bnusNo: number;
 }
 
+export interface LottoPrizeRank {
+  rank: number;
+  winners: number;
+  amount: number;
+  totalAmount?: number;
+}
+
+export interface LottoWinStore {
+  name: string;
+  pickType: string;
+  address: string;
+}
+
+export interface LottoRoundDetail {
+  drwNo: number;
+  drwNoDate: string;
+  prizes: LottoPrizeRank[];
+  totalSales?: number;
+  stores1: LottoWinStore[];
+  stores2: LottoWinStore[];
+}
+
 export type LottoNumbers = [number, number, number, number, number, number];
 
 export interface GeneratedNumbers {
@@ -22,9 +44,12 @@ export interface GeneratedNumbers {
   lottokingDetail?: {
     overlap: number;
     repeatFromLast: number[];
+    repeatFromPrev2?: number[];
     consecutiveRanges: string[];
     consecutivePairCount: number;
     maxRun: number;
+    profileLabel?: string;
+    consecZoneLabel?: string;
   };
 }
 
