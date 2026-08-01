@@ -23,6 +23,8 @@ export function calcAC(nums: number[]): number {
 
 export interface GenOptions {
   exclude?: number[];
+  /** 반드시 포함할 고정수 (1~5개 권장, 6개면 그대로 1게임) */
+  include?: number[];
   acFilter?: boolean;
   sectorFilter?: boolean;
   tailSumFilter?: boolean;
@@ -402,6 +404,136 @@ export function generateMultiple(
     if (mode === "balanced") results.push(generateBalanced(opts));
     else if (mode === "weighted") results.push(generateWeighted(rounds, opts));
     else results.push(generateRandom(opts));
+  }
+  return results;
+}
+
+function normalizeInclude(include: number[]): number[] {
+  return [...new Set(include.filter((n) => Number.isInteger(n) && n >= 1 && n <= 45))].sort(
+    (a, b) => a - b,
+  );
+}
+
+/**
+ * 고정수(include)를 넣고 나머지를 자동 채움.
+ * include 1~5개 → 나머지 자동 / 6개 → 그대로 1조합.
+ */
+export function generateFixed(
+  include: number[],
+  rounds: LottoRound[],
+  opts: GenOptions = {},
+  fill: "balanced" | "weighted" = "balanced",
+): GeneratedNumbers {
+  const fixed = normalizeInclude(include);
+  const exclude = new Set(opts.exclude ?? []);
+  for (const n of fixed) exclude.delete(n); // 고정수는 제외 목록에서 해제
+
+  if (fixed.length === 0) {
+    return fill === "weighted"
+      ? { ...generateWeighted(rounds, opts), mode: "fixed" }
+      : { ...generateBalanced(opts), mode: "fixed" };
+  }
+
+  if (fixed.length >= 6) {
+    const nums = fixed.slice(0, 6) as LottoNumbers;
+    return {
+      numbers: nums,
+      mode: "fixed",
+      acValue: calcAC(nums),
+      summary: `고정 ${nums.join(", ")}`,
+      score: 80,
+    };
+  }
+
+  const need = 6 - fixed.length;
+  const pool = Array.from({ length: 45 }, (_, i) => i + 1).filter(
+    (n) => !fixed.includes(n) && !exclude.has(n),
+  );
+
+  if (pool.length < need) {
+    const loose = Array.from({ length: 45 }, (_, i) => i + 1).filter((n) => !fixed.includes(n));
+    const nums = toFixedCombo(fixed, shuffle(loose).slice(0, need));
+    return {
+      numbers: nums,
+      mode: "fixed",
+      acValue: calcAC(nums),
+      summary: `고정 ${fixed.join(", ")}`,
+      score: 60,
+    };
+  }
+
+  // 가중 풀 (weighted 채움)
+  let weightPool = pool;
+  if (fill === "weighted" && rounds.length > 0) {
+    const weights: number[] = new Array(46).fill(1);
+    const recent = [...rounds].sort((a, b) => b.drwNo - a.drwNo).slice(0, 200);
+    for (const r of recent) {
+      for (const n of getNumbers(r)) weights[n] += 3;
+    }
+    const expanded: number[] = [];
+    for (const n of pool) {
+      for (let j = 0; j < weights[n]; j++) expanded.push(n);
+    }
+    if (expanded.length >= need) weightPool = expanded;
+  }
+
+  const acFilter = opts.acFilter ?? false;
+  let attempts = 0;
+  while (attempts < 25000) {
+    attempts += 1;
+    const rest: number[] = [];
+    const shuffled = shuffle(weightPool);
+    for (const n of shuffled) {
+      if (rest.includes(n) || fixed.includes(n)) continue;
+      rest.push(n);
+      if (rest.length === need) break;
+    }
+    if (rest.length < need) continue;
+    const combo = [...fixed, ...rest];
+    if (!isValid(combo, acFilter) || !passesExtraFilters(combo, opts)) continue;
+    const nums = combo.sort((a, b) => a - b) as LottoNumbers;
+    return {
+      numbers: nums,
+      mode: "fixed",
+      acValue: calcAC(nums),
+      summary: `고정 ${fixed.join(", ")}`,
+      score: 75,
+    };
+  }
+
+  // 필터 완화 폴백
+  const rest = shuffle(pool).slice(0, need);
+  const nums = toFixedCombo(fixed, rest);
+  return {
+    numbers: nums,
+    mode: "fixed",
+    acValue: calcAC(nums),
+    summary: `고정 ${fixed.join(", ")}`,
+    score: 55,
+  };
+}
+
+function toFixedCombo(fixed: number[], rest: number[]): LottoNumbers {
+  return [...fixed, ...rest].sort((a, b) => a - b) as LottoNumbers;
+}
+
+export function generateFixedMultiple(
+  include: number[],
+  count: number,
+  rounds: LottoRound[],
+  opts: GenOptions = {},
+  fill: "balanced" | "weighted" = "balanced",
+): GeneratedNumbers[] {
+  const results: GeneratedNumbers[] = [];
+  const seen = new Set<string>();
+  let guard = 0;
+  while (results.length < count && guard < count * 80) {
+    guard += 1;
+    const game = generateFixed(include, rounds, opts, fill);
+    const key = game.numbers.join(",");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    results.push(game);
   }
   return results;
 }

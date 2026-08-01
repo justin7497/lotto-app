@@ -10,7 +10,10 @@ import {
 } from "react";
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   type User,
@@ -21,6 +24,11 @@ import {
   notifySavedSetsInvalidate,
   setSavedNumbersUserIdGetter,
 } from "@/utils/savedNumbers";
+import {
+  notifyFavoritePicksInvalidate,
+  setFavoritePicksUserIdGetter,
+} from "@/utils/favoriteNumbers";
+import { clearUserLocalData, deleteUserFirestoreData } from "@/utils/accountDeletion";
 
 interface AuthContextValue {
   user: User | null;
@@ -29,6 +37,7 @@ interface AuthContextValue {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -42,26 +51,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
       setSavedNumbersUserIdGetter(null);
+      setFavoritePicksUserIdGetter(null);
       setIsLoaded(true);
       return;
     }
 
+    let settled = false;
+    const authTimeout = window.setTimeout(() => {
+      if (!settled) {
+        setSavedNumbersUserIdGetter(null);
+        setFavoritePicksUserIdGetter(null);
+        setIsLoaded(true);
+      }
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      settled = true;
+      window.clearTimeout(authTimeout);
       setUser(nextUser);
       setIsLoaded(true);
-      setSavedNumbersUserIdGetter(nextUser ? () => nextUser.uid : null);
+      const getter = nextUser ? () => nextUser.uid : null;
+      setSavedNumbersUserIdGetter(getter);
+      setFavoritePicksUserIdGetter(getter);
 
       const nextUid = nextUser?.uid ?? null;
       if (prevUidRef.current !== undefined && prevUidRef.current !== nextUid) {
         qc.clear();
         notifySavedSetsInvalidate();
+        notifyFavoritePicksInvalidate();
       }
       prevUidRef.current = nextUid;
     });
 
     return () => {
+      window.clearTimeout(authTimeout);
       unsubscribe();
       setSavedNumbersUserIdGetter(null);
+      setFavoritePicksUserIdGetter(null);
     };
   }, [qc]);
 
@@ -80,6 +106,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
   }, []);
 
+  const deleteAccount = useCallback(async (password: string) => {
+    if (!auth?.currentUser) throw new Error("로그인이 필요합니다");
+    const email = auth.currentUser.email;
+    if (!email) throw new Error("이메일 계정만 탈퇴할 수 있습니다");
+
+    const credential = EmailAuthProvider.credential(email, password);
+    await reauthenticateWithCredential(auth.currentUser, credential);
+
+    const uid = auth.currentUser.uid;
+    await deleteUserFirestoreData(uid);
+    clearUserLocalData();
+    await deleteUser(auth.currentUser);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -88,8 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signOut,
+      deleteAccount,
     }),
-    [user, isLoaded, signInWithEmail, signUpWithEmail, signOut],
+    [user, isLoaded, signInWithEmail, signUpWithEmail, signOut, deleteAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -105,6 +146,7 @@ export function useAuth(): AuthContextValue {
       signInWithEmail: async () => {},
       signUpWithEmail: async () => {},
       signOut: async () => {},
+      deleteAccount: async () => {},
     };
   }
   return ctx;

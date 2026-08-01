@@ -23,6 +23,24 @@ function getProxyBase(): string {
   return "/api";
 }
 
+async function fetchRoundsFromSync(
+  fromDrwNo: number,
+  toDrwNo: number,
+): Promise<LottoRound[]> {
+  try {
+    const res = await fetch(`/lotto-sync.json?t=${Date.now()}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { rounds?: LottoRound[] };
+    if (!Array.isArray(data.rounds)) return [];
+    return data.rounds.filter((r) => r.drwNo >= fromDrwNo && r.drwNo <= toDrwNo);
+  } catch {
+    return [];
+  }
+}
+
 async function fetchRoundViaProxy(drwNo: number): Promise<LottoRound | null> {
   try {
     const res = await fetch(`${getProxyBase()}/lotto/${drwNo}`, {
@@ -105,6 +123,11 @@ export async function fetchMissingRounds(
     return proxyResults;
   }
 
+  const syncResults = await fetchRoundsFromSync(fromDrwNo, toDrwNo);
+  if (syncResults.length > 0) {
+    return syncResults;
+  }
+
   const directResults: LottoRound[] = [];
   for (let i = fromDrwNo; i <= toDrwNo; i++) {
     const proxyRound = await fetchRoundViaProxy(i);
@@ -125,6 +148,32 @@ export async function fetchMissingRounds(
   }
 
   return directResults;
+}
+
+export async function fetchRemoteLatestDrwNo(): Promise<number | null> {
+  try {
+    const res = await fetch(`${getProxyBase()}/lotto/latest`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { drwNo?: number };
+      if (typeof data.drwNo === "number") return data.drwNo;
+    }
+  } catch {
+    /* try sync fallback */
+  }
+
+  try {
+    const res = await fetch(`/lotto-sync.json?t=${Date.now()}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { latestDrwNo?: number };
+    return typeof data.latestDrwNo === "number" ? data.latestDrwNo : null;
+  } catch {
+    return null;
+  }
 }
 
 export function loadCachedRounds(): LottoRound[] {

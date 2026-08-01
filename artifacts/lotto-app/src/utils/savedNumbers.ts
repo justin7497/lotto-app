@@ -3,7 +3,6 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  limit,
   orderBy,
   query,
   setDoc,
@@ -15,7 +14,6 @@ import { db, isFirebaseConfigured } from "@/lib/firebase";
 const MIGRATION_KEY = "lotto_migrated_firestore_v1";
 const LEGACY_KEY = "lotto_saved_numbers";
 const LOCAL_KEY = "lotto_saved_sets_v4";
-export const MAX_SAVED_SETS = 50;
 
 type UserIdGetter = () => string | null;
 let userIdGetter: UserIdGetter | null = null;
@@ -151,9 +149,9 @@ function mergeSavedSets(...groups: SavedSet[][]): SavedSet[] {
       byId.set(row.id, sanitizeSavedSet(normalizeSavedSet(row)));
     }
   }
-  return [...byId.values()]
-    .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
-    .slice(0, MAX_SAVED_SETS);
+  return [...byId.values()].sort(
+    (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
+  );
 }
 
 function readLocalKey(key: string): SavedSet[] {
@@ -175,7 +173,7 @@ function loadLocalSavedSets(): SavedSet[] {
 
 function saveLocalSavedSets(rows: SavedSet[]): void {
   try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(rows.slice(0, MAX_SAVED_SETS)));
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(rows));
   } catch {
     /* ignore */
   }
@@ -207,12 +205,11 @@ async function loadFromFirestore(uid: string): Promise<SavedSet[]> {
   const mapDocs = (docs: { data: () => unknown }[]) =>
     docs
       .map((d) => sanitizeSavedSet(normalizeSavedSet(d.data() as SavedSet)))
-      .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
-      .slice(0, MAX_SAVED_SETS);
+      .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
 
   try {
     const snap = await getDocs(
-      query(savedSetsCollection(uid), orderBy("savedAt", "desc"), limit(MAX_SAVED_SETS)),
+      query(savedSetsCollection(uid), orderBy("savedAt", "desc")),
     );
     return mapDocs(snap.docs);
   } catch {

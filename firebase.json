@@ -2,22 +2,56 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
   "hosting": [
     {
       "target": "lotto",
       "public": "artifacts/lotto-app/dist/public",
       "ignore": [
         "firebase.json",
-        "**/.*",
         "**/node_modules/**"
       ],
       "headers": [
+        {
+          "source": "/",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
         {
           "source": "site.webmanifest",
           "headers": [
             {
               "key": "Content-Type",
               "value": "application/manifest+json"
+            }
+          ]
+        },
+        {
+          "source": ".well-known/assetlinks.json",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=300"
             }
           ]
         },
@@ -32,6 +66,20 @@
         }
       ],
       "rewrites": [
+        {
+          "source": "/api/lotto/**",
+          "function": {
+            "functionId": "lottoApi",
+            "region": "asia-northeast3"
+          }
+        },
+        {
+          "source": "/api/auth/password-reset",
+          "function": {
+            "functionId": "passwordResetEmail",
+            "region": "asia-northeast3"
+          }
+        },
         {
           "source": "**",
           "destination": "/index.html"

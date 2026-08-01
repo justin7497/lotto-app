@@ -8,10 +8,13 @@
     "dev:ebay": "corepack pnpm --filter @workspace/ebay-description run dev",
     "update:lotto-data": "node ./scripts/update-lotto-data.mjs",
     "notify:winners": "node ./scripts/notify-winners.mjs",
+    "notify:engagement": "node ./scripts/notify-engagement.mjs",
     "deploy:lotto:ci": "node ./scripts/ci-update-and-deploy.mjs",
     "build:lotto": "node ./scripts/build-lotto.mjs",
+    "build:android-aab": "node ./scripts/build-android-aab.mjs",
+    "update:assetlinks": "node ./scripts/update-assetlinks.mjs",
     "build:ebay": "node ./scripts/build-ebay.mjs",
-    "deploy:firebase": "corepack pnpm run build:lotto && firebase deploy --only hosting:lotto,firestore:rules",
+    "deploy:firebase": "corepack pnpm run build:lotto && firebase deploy --only hosting:lotto,functions,firestore:rules",
     "deploy:ebay": "corepack pnpm run build:ebay && firebase deploy --only hosting:ebay",
     "build": "corepack pnpm run typecheck && corepack pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
@@ -19,7 +22,8 @@
   },
   "private": true,
   "devDependencies": {
-    "typescript": "~5.9.2",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "sharp": "^0.35.3",
+    "typescript": "~5.9.2"
   }
 }

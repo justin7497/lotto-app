@@ -17,8 +17,10 @@ export interface SajuInput {
   year: number;
   month: number;
   day: number;
-  /** 시진 시작 시각 (23, 1, 3, … 21) — HOUR_PILLARS.startHour */
+  /** 출생 시각 (0~23) */
   hour: number;
+  /** 출생 분 (0~59) */
+  minute: number;
   bloodType: BloodType;
 }
 
@@ -52,6 +54,17 @@ export interface SajuProfile {
   luckyPool: number[];
   /** 계산 엔진 안내 */
   engineNote: string;
+}
+
+export interface DailySajuContent {
+  title: string;
+  overall: string;
+  wealth: string;
+  work: string;
+  love: string;
+  health: string;
+  luckyColor: string;
+  luckyDirection: string;
 }
 
 const BRANCH_ANIMAL: Record<
@@ -171,6 +184,50 @@ export function getHourPillarLabel(startHour: number): string {
   return HOUR_PILLARS.find((p) => p.startHour === startHour)?.label ?? "오시 (11~13시)";
 }
 
+/** 시·분 → 해당 시진 시작 시각 */
+export function clockToPillarStartHour(hour: number, minute: number): number {
+  const mins = hour * 60 + minute;
+  if (mins >= 23 * 60 || mins < 60) return 23;
+  if (mins < 3 * 60) return 1;
+  if (mins < 5 * 60) return 3;
+  if (mins < 7 * 60) return 5;
+  if (mins < 9 * 60) return 7;
+  if (mins < 11 * 60) return 9;
+  if (mins < 13 * 60) return 11;
+  if (mins < 15 * 60) return 13;
+  if (mins < 17 * 60) return 15;
+  if (mins < 19 * 60) return 17;
+  if (mins < 21 * 60) return 19;
+  return 21;
+}
+
+export function formatClockTime(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+export function getClockTimeLabel(hour: number, minute: number): string {
+  const pillar = getHourPillarLabel(clockToPillarStartHour(hour, minute));
+  return `${formatClockTime(hour, minute)} (${pillar})`;
+}
+
+function normalizeSajuInput(data: Partial<SajuInput> & { hour?: number; minute?: number }): SajuInput | null {
+  if (!data.year || !data.month || !data.day) return null;
+  const bloodType = data.bloodType ?? "unknown";
+  let hour = typeof data.hour === "number" ? data.hour : 12;
+  let minute = typeof data.minute === "number" ? data.minute : 0;
+
+  // 구버전: 시진 시작 시각만 저장됨 (23, 1, 3, …)
+  if (data.minute === undefined && HOUR_PILLARS.some((p) => p.startHour === hour)) {
+    const clock = pillarStartToClock(hour);
+    hour = clock.hour;
+    minute = clock.minute;
+  }
+
+  hour = Math.min(23, Math.max(0, Math.floor(hour)));
+  minute = Math.min(59, Math.max(0, Math.floor(minute)));
+  return { year: data.year, month: data.month, day: data.day, hour, minute, bloodType };
+}
+
 function uniqueSorted(nums: number[]): number[] {
   return [...new Set(nums.filter((n) => n >= 1 && n <= 45))].sort((a, b) => a - b);
 }
@@ -187,7 +244,8 @@ function countElements(
 }
 
 export function buildSajuProfile(input: SajuInput): SajuProfile {
-  const { hour, minute } = pillarStartToClock(input.hour);
+  const hour = input.hour;
+  const minute = input.minute;
   const fp = calculateFourPillars({
     year: input.year,
     month: input.month,
@@ -254,12 +312,41 @@ export function buildSajuProfile(input: SajuInput): SajuProfile {
     zodiacWesternEmoji: western.emoji,
     zodiacEastern: `${animal.name}띠`,
     zodiacEasternEmoji: animal.emoji,
-    hourPillarLabel: getHourPillarLabel(input.hour),
+    hourPillarLabel: getClockTimeLabel(hour, minute),
     bloodType: input.bloodType,
     bloodLabel: blood.label,
     summary: `${pillars.fullText} · ${animal.name}띠 · ${western.name}`,
     luckyPool,
     engineNote: "manseryeok 오픈소스 (한국천문연구원 KASI 정본 데이터)",
+  };
+}
+
+export function buildDailySajuContent(profile: SajuProfile, date = new Date()): DailySajuContent {
+  const day = date.getDay();
+  const topElement = (Object.entries(profile.elementCounts) as [FiveElement, number][])
+    .sort((a, b) => b[1] - a[1])[0][0];
+  const weakElement = (Object.entries(profile.elementCounts) as [FiveElement, number][])
+    .sort((a, b) => a[1] - b[1])[0][0];
+
+  const colorByElement: Record<FiveElement, string> = {
+    목: "그린",
+    화: "레드",
+    토: "옐로우",
+    금: "화이트",
+    수: "네이비",
+  };
+  const directionByDay = ["북", "북동", "동", "남동", "남", "남서", "서"] as const;
+  const paceByDay = ["천천히", "차분히", "유연하게", "집중해서", "과감하게", "신중하게", "정리하며"];
+
+  return {
+    title: "오늘의 사주",
+    overall: `${profile.dayMaster} · ${paceByDay[day]}`,
+    wealth: `금전 · ${profile.luckyPool.slice(0, 3).join(", ")}`,
+    work: `일 · ${ELEMENT_LABEL[topElement]} 강세`,
+    love: `애정 · ${profile.zodiacEastern}`,
+    health: `건강 · ${ELEMENT_LABEL[weakElement]} 보완`,
+    luckyColor: colorByElement[topElement],
+    luckyDirection: directionByDay[day],
   };
 }
 
@@ -359,9 +446,8 @@ export function loadSajuInput(): SajuInput | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem("lotto_saju_profile_v1");
     if (!raw) return null;
-    const data = JSON.parse(raw) as SajuInput;
-    if (!data.year || !data.month || !data.day) return null;
-    return data;
+    const data = JSON.parse(raw) as Partial<SajuInput>;
+    return normalizeSajuInput(data);
   } catch {
     return null;
   }
@@ -409,4 +495,12 @@ export function saveWeeklySajuGames(games: GeneratedNumbers[], input: SajuInput)
   }
 }
 
-export const SAJU_WEEKLY_GAME_COUNT = 10;
+export const SAJU_WEEKLY_GAME_COUNT = 5;
+
+export function clearWeeklySajuGames(): void {
+  try {
+    localStorage.removeItem(WEEKLY_KEY);
+  } catch {
+    /* ignore */
+  }
+}

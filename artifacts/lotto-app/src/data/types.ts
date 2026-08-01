@@ -63,7 +63,8 @@ export type GeneratorMode =
   | "tail"
   | "consecutive"
   | "lottoking"
-  | "saju";
+  | "saju"
+  | "fixed";
 
 export interface FrequencyData {
   number: number;

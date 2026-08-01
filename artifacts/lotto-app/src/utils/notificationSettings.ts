@@ -4,6 +4,8 @@ import { db, isFirebaseConfigured } from "@/lib/firebase";
 export interface NotificationSettings {
   emailEnabled: boolean;
   pushEnabled: boolean;
+  /** true면 낙첨이어도 해당 회차 결과 알림 */
+  notifyEvenIfLose: boolean;
   minRank: 1 | 2 | 3 | 4 | 5;
   updatedAt: string;
 }
@@ -11,6 +13,7 @@ export interface NotificationSettings {
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   emailEnabled: false,
   pushEnabled: false,
+  notifyEvenIfLose: true,
   minRank: 5,
   updatedAt: new Date().toISOString(),
 };
@@ -33,6 +36,11 @@ function normalizeSettings(raw: unknown): NotificationSettings {
   return {
     emailEnabled: Boolean(data.emailEnabled),
     pushEnabled: Boolean(data.pushEnabled),
+    // 기존 문서에 필드 없으면 기본 true (낙첨이어도 알림)
+    notifyEvenIfLose:
+      typeof data.notifyEvenIfLose === "boolean"
+        ? data.notifyEvenIfLose
+        : true,
     minRank: rank,
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
