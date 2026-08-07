@@ -25,6 +25,12 @@ on:
     - cron: "0 0 * * 0"
     # 일요 21:00 KST 재시도 = 12:00 UTC
     - cron: "0 12 * * 0"
+  push:
+    branches: [main]
+    paths:
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/update-lotto-data.yml"
   workflow_dispatch:
     inputs:
       force_deploy:

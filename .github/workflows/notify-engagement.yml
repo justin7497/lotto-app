@@ -13,6 +13,13 @@ on:
     - cron: "0 1 * * *"
     # 토요 18:00 KST = 09:00 UTC (추첨 전 안내)
     - cron: "0 9 * * 6"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/notify-engagement.yml"
+      - "scripts/notify-engagement.mjs"
+      - "scripts/lib/engagementCampaigns.mjs"
+      - "functions/lib/engagementCampaigns.mjs"
   workflow_dispatch:
     inputs:
       campaign:
@@ -62,6 +69,10 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON secret is not set."
+            exit 1
+          fi
           ARGS=""
           if [ -n "${{ github.event.inputs.campaign }}" ]; then
             ARGS="$ARGS --campaign=${{ github.event.inputs.campaign }}"
