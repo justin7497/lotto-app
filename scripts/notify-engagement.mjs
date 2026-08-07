@@ -10,6 +10,7 @@
  *   node scripts/notify-engagement.mjs --schedule=saturday-18kst
  */
 import { resolve, dirname } from "node:path";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
@@ -37,8 +38,18 @@ function parseArgs(argv) {
   return { dryRun, campaignId, schedule };
 }
 
+function loadServiceAccountJson() {
+  const inline = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (inline?.trim()) return inline;
+  const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (credPath) {
+    return readFileSync(resolve(credPath), "utf8");
+  }
+  return null;
+}
+
 function initFirebase() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw = loadServiceAccountJson();
   if (!raw) return null;
   const serviceAccount = JSON.parse(raw);
   if (getApps().length === 0) {

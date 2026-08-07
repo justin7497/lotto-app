@@ -256,12 +256,6 @@ importers:
 
   artifacts/lotto-app:
     dependencies:
-      '@techstark/opencv-js':
-        specifier: 5.0.0-release.1
-        version: 5.0.0-release.1
-      '@vis.gl/react-google-maps':
-        specifier: ^1.9.0
-        version: 1.9.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       firebase:
         specifier: ^11.10.0
         version: 11.10.0
@@ -271,9 +265,6 @@ importers:
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1
-      html5-qrcode:
-        specifier: ^2.3.8
-        version: 2.3.8
       manseryeok:
         specifier: ^2.0.0
         version: 2.0.0
@@ -383,9 +374,6 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.90.21(react@19.1.0)
-      '@types/google.maps':
-        specifier: ^3.65.3
-        version: 3.65.3
       '@types/node':
         specifier: 'catalog:'
         version: 25.3.5
@@ -1114,9 +1102,6 @@ packages:
   '@google-cloud/storage@7.21.0':
     resolution: {integrity: sha512-l+IFTkd+6Y5LoAuXyYCKNAKtw/Ci+rAMqgdTB1jv4iZiLhw0rtq+0qjIRbBizXkNzEFmXiXUW0H7sZQQvk1ffA==}
     engines: {node: '>=14'}
-
-  '@googlemaps/js-api-loader@2.1.1':
-    resolution: {integrity: sha512-yUpAwksbHrlZIWD49JmveNSfBG4oAK0AwMknfSaPMnP5N7UT8oFRVCqwjGb1XQovi//7KLbPQKZpbofiLGzpDw==}
 
   '@grpc/grpc-js@1.14.4':
     resolution: {integrity: sha512-k9Dj3DV/itK9D06Y8f190Qgop7/Ui+D0njFV3LHMPwPT75DpXLQohE9Wmz0QElrJnzsjB7KPWiKJbOl7IPDArQ==}
@@ -2243,9 +2228,6 @@ packages:
     peerDependencies:
       react: ^18 || ^19
 
-  '@techstark/opencv-js@5.0.0-release.1':
-    resolution: {integrity: sha512-PIm+eB0MFtieXoNC2GRao0dv/02sehG+Nv2nSW5D6pQm6J/4WqvDHm0RyoqOmGYQm67jdGiaOdIeTShCY3PIUg==}
-
   '@tootallnate/once@2.0.1':
     resolution: {integrity: sha512-HqmEUIGRJ5fSXchkVgR5F7qn48bDBzv0kWj/Kfu5e6uci4UlEeng4331LnBkWffb++Ei3FOVLxo8JJWMFBDMeQ==}
     engines: {node: '>= 10'}
@@ -2315,9 +2297,6 @@ packages:
   '@types/express@5.0.6':
     resolution: {integrity: sha512-sKYVuV7Sv9fbPIt/442koC7+IIwK5olP1KWeD88e/idgoJqDm3JV/YUiPwkoKK92ylff2MGxSz1CSjsXelx0YA==}
 
-  '@types/google.maps@3.65.3':
-    resolution: {integrity: sha512-tqbbx7MUtoDk+RwpZMymPDj6Skez0FhqDZNhLhS5UDmCx4D1dgP+BJOHTebiO/rhjJLa1f8te2p6mJJeFKVFOQ==}
-
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
 
@@ -2370,12 +2349,6 @@ packages:
 
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
-
-  '@vis.gl/react-google-maps@1.9.0':
-    resolution: {integrity: sha512-ELL/zo8mRMPGDQZwHRClf2tE1/PMYYKjg+C/dUn8rmlQ0e+s7rkcNmCgaeBAV48GJzEcrBsr+vjDv4AvzJrlUA==}
-    peerDependencies:
-      react: '>=16.8.0 || ^19.0 || ^19.0.0-rc'
-      react-dom: '>=16.8.0 || ^19.0 || ^19.0.0-rc'
 
   '@vitejs/plugin-react@5.1.4':
     resolution: {integrity: sha512-VIcFLdRi/VYRU8OL/puL7QXMYafHmqOnwTZY50U1JPlCNj30PxCMx65c494b1K9be9hX83KVt0+gTEwTWLqToA==}
@@ -2994,10 +2967,6 @@ packages:
     resolution: {integrity: sha512-jt2DW/aNFNwke7AUd+Z+e6pz39KO5rzdbbFCg2sGafS4mk13MI7Z8O5z9cADNn5lhGODIgLwug6TZO2ctf7kcw==}
     engines: {node: '>=6.0.0'}
 
-  fast-equals@6.0.2:
-    resolution: {integrity: sha512-sAjhj9ZhOxYCGiNMnZLaucOqf5ZeFnHNoKoAZiD9thhJ0N8RP85qJK759/97C/3L7NzzmGVB5uiX9AUpySZmUQ==}
-    engines: {node: '>=6.0.0'}
-
   fast-glob@3.3.3:
     resolution: {integrity: sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==}
     engines: {node: '>=8.6.0'}
@@ -3236,9 +3205,6 @@ packages:
   html2canvas@1.4.1:
     resolution: {integrity: sha512-fPU6BHNpsyIhr8yyMpTLLxAbkaK8ArIBcmZIRiBLiDhjeqvXolaEmDGmELFuX9I4xDcaKKcJl+TKZLqruBbmWA==}
     engines: {node: '>=8.0.0'}
-
-  html5-qrcode@2.3.8:
-    resolution: {integrity: sha512-jsr4vafJhwoLVEDW3n1KvPnCCXWaQfRng0/EEYk1vNcQGcG/htAdhJX0be8YyqMoSz7+hZvOZSTAepsabiuhiQ==}
 
   htmlparser2@8.0.2:
     resolution: {integrity: sha512-GYdjWKDkbRLkZ5geuHs5NY1puJ+PXwP7+fHPRz06Eirsb9ugf6d8kkXav6ADhcODhFFPMIXyxkxSuMf3D6NCFA==}
@@ -5101,10 +5067,6 @@ snapshots:
       - supports-color
     optional: true
 
-  '@googlemaps/js-api-loader@2.1.1':
-    dependencies:
-      '@types/google.maps': 3.65.3
-
   '@grpc/grpc-js@1.14.4':
     dependencies:
       '@grpc/proto-loader': 0.8.1
@@ -6285,8 +6247,6 @@ snapshots:
       '@tanstack/query-core': 5.90.20
       react: 19.1.0
 
-  '@techstark/opencv-js@5.0.0-release.1': {}
-
   '@tootallnate/once@2.0.1':
     optional: true
 
@@ -6370,8 +6330,6 @@ snapshots:
       '@types/express-serve-static-core': 5.1.1
       '@types/serve-static': 2.2.0
 
-  '@types/google.maps@3.65.3': {}
-
   '@types/hast@3.0.4':
     dependencies:
       '@types/unist': 3.0.3
@@ -6435,14 +6393,6 @@ snapshots:
     optional: true
 
   '@types/unist@3.0.3': {}
-
-  '@vis.gl/react-google-maps@1.9.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
-    dependencies:
-      '@googlemaps/js-api-loader': 2.1.1
-      '@types/google.maps': 3.65.3
-      fast-equals: 6.0.2
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
 
   '@vitejs/plugin-react@5.1.4(vite@7.3.2(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
@@ -6974,8 +6924,6 @@ snapshots:
 
   fast-equals@5.4.0: {}
 
-  fast-equals@6.0.2: {}
-
   fast-glob@3.3.3:
     dependencies:
       '@nodelib/fs.stat': 2.0.5
@@ -7339,8 +7287,6 @@ snapshots:
     dependencies:
       css-line-break: 2.1.0
       text-segmentation: 1.0.3
-
-  html5-qrcode@2.3.8: {}
 
   htmlparser2@8.0.2:
     dependencies:
