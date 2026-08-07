@@ -1,22 +1,196 @@
 rules_version = '2';
 
+
+
 service cloud.firestore {
+
   match /databases/{database}/documents {
-    match /users/{userId}/savedNumbers/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    function deviceCommonFields(deviceId) {
+
+      let d = request.resource.data;
+
+      return d.deviceId == deviceId
+
+        && d.installedAt is string
+
+        && d.lastActiveAt is string
+
+        && d.engagementPushEnabled is bool
+
+        && d.updatedAt is string
+
+        && (!('linkedUid' in d) || d.linkedUid == null || d.linkedUid is string)
+
+        && (!('userAgent' in d) || d.userAgent is string)
+
+        && (!('platform' in d) || d.platform is string);
+
     }
+
+
+
+    function isValidDeviceCreate(deviceId) {
+
+      let d = request.resource.data;
+
+      return deviceCommonFields(deviceId)
+
+        && d.fcmToken is string
+
+        && d.fcmToken.size() > 0
+
+        && d.fcmToken.size() < 600;
+
+    }
+
+
+
+    function isValidDeviceUpdate(deviceId) {
+
+      let d = request.resource.data;
+
+      return deviceCommonFields(deviceId)
+
+        && (!('fcmToken' in d) || (d.fcmToken is string && d.fcmToken.size() > 0 && d.fcmToken.size() < 600));
+
+    }
+
+
+
+    match /devices/{deviceId} {
+
+      allow read: if false;
+
+      allow create: if isValidDeviceCreate(deviceId);
+
+      allow update: if isValidDeviceUpdate(deviceId) && (
+
+        request.auth == null
+
+        || !('linkedUid' in request.resource.data)
+
+        || request.resource.data.linkedUid == request.auth.uid
+
+        || request.resource.data.linkedUid == resource.data.get('linkedUid', null)
+
+      );
+
+      allow delete: if false;
+
+
+
+      match /engagementLog/{campaignId} {
+
+        allow read, write: if false;
+
+      }
+
+      match /issuedTickets/{ticketId} {
+
+        allow read: if false;
+
+        allow create, update: if isValidIssuedTicket(deviceId, ticketId);
+
+        allow delete: if false;
+
+      }
+
+      match /winNotificationLog/{drwNo} {
+
+        allow read, write: if false;
+
+      }
+
+    }
+
+
+
+    function isValidIssuedTicket(deviceId, ticketId) {
+
+      let d = request.resource.data;
+
+      return d.deviceId == deviceId
+
+        && d.ticketId == ticketId
+
+        && d.drwNo is int
+
+        && d.drwNo > 0
+
+        && d.drwNo < 100000
+
+        && d.roundTag is string
+
+        && d.roundTag.size() > 0
+
+        && d.roundTag.size() < 120
+
+        && d.issuedAt is string
+
+        && d.updatedAt is string
+
+        && d.games is list
+
+        && d.games.size() > 0
+
+        && d.games.size() <= 5;
+
+    }
+
+
+
+    match /users/{userId}/savedNumbers/{docId} {
+
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    }
+
+
+
+    match /users/{userId}/favoritePicks/{docId} {
+
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    }
+
+
 
     match /users/{userId}/settings/{docId} {
+
       allow read, write: if request.auth != null && request.auth.uid == userId;
+
     }
+
+
 
     match /users/{userId}/fcmTokens/{tokenId} {
+
       allow read, write: if request.auth != null && request.auth.uid == userId;
+
     }
 
+
+
     match /users/{userId}/notificationLog/{docId} {
+
       allow read: if request.auth != null && request.auth.uid == userId;
+
       allow write: if false;
+
     }
+
+
+
+    match /appConfig/{docId} {
+
+      allow read: if docId == "wishPhrases" || docId == "engagementCampaigns";
+
+      allow write: if false;
+
+    }
+
   }
+
 }
+

@@ -121,6 +121,13 @@ jobs:
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
         run: node scripts/notify-winners.mjs
 
+      - name: Notify device wins (issued slip)
+        if: steps.changes.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/notify-device-wins.mjs
+
       - name: Notify engagement (post-draw)
         if: steps.changes.outputs.changed == 'true'
         continue-on-error: true
