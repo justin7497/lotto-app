@@ -1,0 +1,72 @@
+# 비로그인 기기 대상 사용 유도 푸시 발송
+#
+# 필요한 GitHub Secrets:
+#   FIREBASE_SERVICE_ACCOUNT_JSON
+#
+# 수동 실행: Actions > Engagement Push Notifications > Run workflow
+
+name: Engagement Push Notifications
+
+on:
+  schedule:
+    # 매일 10:00 KST = 01:00 UTC (welcome-d1, inactive-d3/d7)
+    - cron: "0 1 * * *"
+    # 토요 18:00 KST = 09:00 UTC (추첨 전 안내)
+    - cron: "0 9 * * 6"
+  workflow_dispatch:
+    inputs:
+      campaign:
+        description: "특정 캠페인만 발송 (비우면 해당 시각 due 캠페인)"
+        required: false
+        type: string
+      dry_run:
+        description: "dry-run"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notify-engagement
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Send engagement push
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.campaign }}" ]; then
+            ARGS="$ARGS --campaign=${{ github.event.inputs.campaign }}"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          node scripts/notify-engagement.mjs $ARGS
