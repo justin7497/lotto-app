@@ -14,6 +14,7 @@
     "build:android-aab": "node ./scripts/build-android-aab.mjs",
     "update:assetlinks": "node ./scripts/update-assetlinks.mjs",
     "build:ebay": "node ./scripts/build-ebay.mjs",
+    "generate:app-icons": "node ./scripts/generate-app-icons.mjs",
     "deploy:firebase": "corepack pnpm run build:lotto && firebase deploy --only hosting:lotto,functions,firestore:rules",
     "deploy:ebay": "corepack pnpm run build:ebay && firebase deploy --only hosting:ebay",
     "build": "corepack pnpm run typecheck && corepack pnpm -r --if-present run build",

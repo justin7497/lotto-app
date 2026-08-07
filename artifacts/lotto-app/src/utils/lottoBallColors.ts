@@ -29,8 +29,8 @@ export function getBallFlatColor(n: number): string {
   }
 }
 
-export const BALL_MUTED_BG = "#d4d4d4";
-export const BALL_MUTED_FG = "#ffffff";
+export const BALL_MUTED_BG = "#e8e8e8";
+export const BALL_MUTED_FG = "#9ca3af";
 
 export function getBallSolidColor(n: number): string {
   return getBallFlatColor(n);

@@ -1,5 +1,6 @@
 import { BookOpen, X } from "lucide-react";
 import { MODE_INFO, SINGLE_MODES } from "@/data/generatorModes";
+import { useOverlayBack } from "@/hooks/useOverlayBack";
 
 interface GeneratorGuideSheetProps {
   open: boolean;
@@ -7,12 +8,13 @@ interface GeneratorGuideSheetProps {
 }
 
 export default function GeneratorGuideSheet({ open, onClose }: GeneratorGuideSheetProps) {
+  const closeSheet = useOverlayBack(open, onClose);
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
-      onClick={onClose}
+      onClick={closeSheet}
     >
       <div
         className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88vh] overflow-y-auto"
@@ -27,7 +29,7 @@ export default function GeneratorGuideSheet({ open, onClose }: GeneratorGuideShe
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeSheet}
             className="p-2.5 rounded-full hover:bg-gray-100 text-gray-500 shrink-0"
             aria-label="닫기"
           >

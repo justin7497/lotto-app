@@ -12,14 +12,15 @@ import {
   Star,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { AUTH_UI_VISIBLE } from "@/config/authUi";
 
 const NAV_ITEMS = [
   { href: "/", icon: LayoutDashboard, label: "홈", short: "홈" },
-  { href: "/lottoking", icon: Crown, label: "로또킹", short: "킹" },
-  { href: "/saju", icon: Sparkles, label: "사주", short: "사주" },
-  { href: "/generator", icon: Shuffle, label: "추천", short: "추천" },
-  { href: "/extracted", icon: Layers, label: "추출번호", short: "추출" },
-  { href: "/my-numbers", icon: Heart, label: "내번호", short: "내번호" },
+  { href: "/lottoking", icon: Crown, label: "패턴번호", short: "패턴" },
+  { href: "/saju", icon: Sparkles, label: "행운번호", short: "사주" },
+  { href: "/generator", icon: Shuffle, label: "8추천", short: "스마트" },
+  { href: "/ball-draw", icon: Layers, label: "추첨", short: "뽑기" },
+  { href: "/saved-numbers", icon: Heart, label: "내번호", short: "내번호" },
 ];
 
 function isActiveTab(location: string, href: string): boolean {
@@ -29,6 +30,27 @@ function isActiveTab(location: string, href: string): boolean {
 
 function AuthButton() {
   const { isSignedIn, isLoaded, user, signOut } = useAuth();
+
+  if (!AUTH_UI_VISIBLE) {
+    if (!isLoaded || !isSignedIn) return null;
+    const displayName = user?.email?.split("@")[0] ?? "사용자";
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+          <User className="w-5 h-5 text-amber-600" />
+        </div>
+        <span className="text-base text-gray-600 hidden md:block max-w-[100px] truncate">{displayName}</span>
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-base font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="hidden sm:inline">로그아웃</span>
+        </button>
+      </div>
+    );
+  }
 
   if (!isLoaded) {
     return (

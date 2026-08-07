@@ -21,6 +21,9 @@ export interface LottoWinStore {
   name: string;
   pickType: string;
   address: string;
+  /** 빌드 시 store-geocode-cache 기준 병합 */
+  lat?: number;
+  lng?: number;
 }
 
 export interface LottoRoundDetail {
@@ -36,6 +39,8 @@ export type LottoNumbers = [number, number, number, number, number, number];
 
 export interface GeneratedNumbers {
   numbers: LottoNumbers;
+  /** QR·슬립 가져오기용 수동/자동 구분 (1~5개 = 반자동) */
+  slipPickMode?: import("@/utils/mobileSlip").SlipPickMode;
   bonus?: number;
   mode: GeneratorMode;
   acValue?: number;

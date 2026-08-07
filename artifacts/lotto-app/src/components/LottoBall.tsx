@@ -20,6 +20,8 @@ interface LottoBallProps {
   highlight?: boolean;
   delay?: number;
   animate?: boolean;
+  /** 추첨 체험 등 — 크기는 CSS(.draw-scene-ball)에서만 지정 */
+  cssSized?: boolean;
 }
 
 /** 지름 대비 숫자 ≈ 70% — sm은 CSS에서 좁은 화면 맞춤 확대 */
@@ -42,6 +44,7 @@ export default function LottoBall({
   highlight = false,
   delay = 0,
   animate = false,
+  cssSized = false,
 }: LottoBallProps) {
   const dim = SIZE[size] ?? SIZE.md;
   const muted = matched === false;
@@ -58,14 +61,16 @@ export default function LottoBall({
       ? "text-white"
       : getBallTextClass(number);
 
-  const style: CSSProperties = {
-    ...sphereStyle,
-    width: dim.w,
-    height: dim.w,
-    fontSize: dim.font,
-    fontWeight: 900,
-    lineHeight: 1,
-  };
+  const style: CSSProperties = cssSized
+    ? { ...sphereStyle, fontWeight: 900, lineHeight: 1 }
+    : {
+        ...sphereStyle,
+        width: dim.w,
+        height: dim.w,
+        fontSize: dim.font,
+        fontWeight: 900,
+        lineHeight: 1,
+      };
 
   const tierClass = muted ? "muted" : tier;
   const shouldAnimate = animate || dramatic;
@@ -73,11 +78,12 @@ export default function LottoBall({
   const ballFace = (
     <div
       className={`
-        lotto-ball lotto-ball--${size}
+        lotto-ball lotto-ball--${cssSized ? "scene" : size}
         ${isGloss ? `lotto-ball--gloss lotto-ball--tier-${tierClass}` : textClass}
         rounded-full
         flex items-center justify-center
         relative select-none shrink-0
+        ${matched === true ? "lotto-ball--hit" : ""}
         ${highlight && matched !== false ? "outline outline-[2px] outline-offset-1 outline-gray-500/70" : ""}
         ${isBonus && !isGloss ? "ring-2 ring-gray-500/60 ring-offset-1" : ""}
         ${isBonus && isGloss ? "lotto-ball--bonus" : ""}

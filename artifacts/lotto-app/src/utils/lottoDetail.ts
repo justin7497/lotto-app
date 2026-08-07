@@ -1,6 +1,6 @@
 import type { LottoRoundDetail, LottoWinStore } from "@/data/types";
 
-const CACHE_KEY = "lotto_round_details_v1";
+const CACHE_KEY = "lotto_round_details_v2";
 
 type DetailCache = Record<number, LottoRoundDetail>;
 
@@ -77,18 +77,51 @@ async function loadPrizesSync(): Promise<PrizesSyncFile["rounds"]> {
 type PrizesRoundEntry = NonNullable<PrizesSyncFile["rounds"]>[string];
 type StoresRoundEntry = NonNullable<StoresSyncFile["rounds"]>[string];
 
+function storeMatchKey(store: Pick<LottoWinStore, "name" | "address">): string {
+  return `${store.name}::${store.address}`;
+}
+
+function enrichStoresWithCoords(
+  stores: LottoWinStore[],
+  bundledStores?: LottoWinStore[],
+): LottoWinStore[] {
+  if (!stores.length || !bundledStores?.length) return stores;
+
+  const coordsByKey = new Map<string, Pick<LottoWinStore, "lat" | "lng">>();
+  for (const store of bundledStores) {
+    if (typeof store.lat !== "number" || typeof store.lng !== "number") continue;
+    coordsByKey.set(storeMatchKey(store), { lat: store.lat, lng: store.lng });
+  }
+  if (coordsByKey.size === 0) return stores;
+
+  return stores.map((store) => {
+    const coords = coordsByKey.get(storeMatchKey(store));
+    if (!coords || (store.lat != null && store.lng != null)) return store;
+    return { ...store, ...coords };
+  });
+}
+
 function mergeBundled(
   detail: LottoRoundDetail,
   prizesBundled?: PrizesRoundEntry,
   storesBundled?: StoresRoundEntry,
 ): LottoRoundDetail {
+  const stores1 = enrichStoresWithCoords(
+    detail.stores1?.length ? detail.stores1 : (storesBundled?.stores1 ?? []),
+    storesBundled?.stores1,
+  );
+  const stores2 = enrichStoresWithCoords(
+    detail.stores2?.length ? detail.stores2 : (storesBundled?.stores2 ?? []),
+    storesBundled?.stores2,
+  );
+
   return {
     ...detail,
     drwNoDate: detail.drwNoDate || prizesBundled?.drwNoDate || "",
     totalSales: detail.totalSales ?? prizesBundled?.totalSales,
     prizes: detail.prizes?.length ? detail.prizes : (prizesBundled?.prizes ?? []),
-    stores1: detail.stores1?.length ? detail.stores1 : (storesBundled?.stores1 ?? []),
-    stores2: detail.stores2?.length ? detail.stores2 : (storesBundled?.stores2 ?? []),
+    stores1,
+    stores2,
   };
 }
 

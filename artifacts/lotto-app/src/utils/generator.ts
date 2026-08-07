@@ -1,4 +1,5 @@
 import type { LottoRound, LottoNumbers, GeneratedNumbers } from "@/data/types";
+import { dedupeGeneratedNumberSets, numberSetKey } from "@/utils/savedNumbers";
 import { getNumbers } from "./analysis";
 
 function shuffle<T>(arr: T[]): T[] {
@@ -328,6 +329,26 @@ export function generateConsecutive(opts: GenOptions = {}): GeneratedNumbers {
   return { ...generateRandom(opts), mode: "consecutive" };
 }
 
+function fillUniqueGenerated(
+  sets: GeneratedNumbers[],
+  count: number,
+  factory: () => GeneratedNumbers,
+): GeneratedNumbers[] {
+  const out = dedupeGeneratedNumberSets(sets);
+  const seen = new Set(out.map((s) => numberSetKey(s.numbers)));
+  let guard = 0;
+  while (out.length < count && guard < count * 100) {
+    guard += 1;
+    const next = factory();
+    if (!next.numbers || next.numbers.length !== 6) continue;
+    const key = numberSetKey(next.numbers);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(next);
+  }
+  return out.slice(0, count);
+}
+
 export function generateMultiple(
   count: number,
   mode: "balanced" | "weighted" | "random" | "monte" | "delta" | "sector" | "tail" | "consecutive",
@@ -379,33 +400,58 @@ export function generateMultiple(
       : candidates;
     const usePool = filtered.length >= count ? filtered : candidates;
     const shuffledTop = shuffle(usePool.slice(0, TOP_K));
-    return shuffledTop.slice(0, count).map((c) => ({
+    const picked: { nums: number[]; score: number }[] = [];
+    const seen = new Set<string>();
+    for (const c of shuffledTop) {
+      const key = numberSetKey(c.nums);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      picked.push(c);
+      if (picked.length >= count) break;
+    }
+    const mapped = picked.map((c) => ({
       numbers: c.nums as LottoNumbers,
       mode: "monte" as const,
       acValue: calcAC(c.nums),
     }));
+    return fillUniqueGenerated(mapped, count, () => generateRandom(opts));
   }
 
   if (mode === "delta") {
-    return Array.from({ length: count }, () => generateDelta(rounds, opts));
+    return fillUniqueGenerated(
+      Array.from({ length: count }, () => generateDelta(rounds, opts)),
+      count,
+      () => generateDelta(rounds, opts),
+    );
   }
   if (mode === "sector") {
-    return Array.from({ length: count }, () => generateSector(opts));
+    return fillUniqueGenerated(
+      Array.from({ length: count }, () => generateSector(opts)),
+      count,
+      () => generateSector(opts),
+    );
   }
   if (mode === "tail") {
-    return Array.from({ length: count }, () => generateTailDigit(opts));
+    return fillUniqueGenerated(
+      Array.from({ length: count }, () => generateTailDigit(opts)),
+      count,
+      () => generateTailDigit(opts),
+    );
   }
   if (mode === "consecutive") {
-    return Array.from({ length: count }, () => generateConsecutive(opts));
+    return fillUniqueGenerated(
+      Array.from({ length: count }, () => generateConsecutive(opts)),
+      count,
+      () => generateConsecutive(opts),
+    );
   }
 
-  const results: GeneratedNumbers[] = [];
-  for (let i = 0; i < count; i++) {
-    if (mode === "balanced") results.push(generateBalanced(opts));
-    else if (mode === "weighted") results.push(generateWeighted(rounds, opts));
-    else results.push(generateRandom(opts));
-  }
-  return results;
+  const factory = (): GeneratedNumbers => {
+    if (mode === "balanced") return generateBalanced(opts);
+    if (mode === "weighted") return generateWeighted(rounds, opts);
+    return generateRandom(opts);
+  };
+  return fillUniqueGenerated(Array.from({ length: count }, factory), count, factory);
 }
 
 function normalizeInclude(include: number[]): number[] {
@@ -524,16 +570,6 @@ export function generateFixedMultiple(
   opts: GenOptions = {},
   fill: "balanced" | "weighted" = "balanced",
 ): GeneratedNumbers[] {
-  const results: GeneratedNumbers[] = [];
-  const seen = new Set<string>();
-  let guard = 0;
-  while (results.length < count && guard < count * 80) {
-    guard += 1;
-    const game = generateFixed(include, rounds, opts, fill);
-    const key = game.numbers.join(",");
-    if (seen.has(key)) continue;
-    seen.add(key);
-    results.push(game);
-  }
-  return results;
+  const factory = () => generateFixed(include, rounds, opts, fill);
+  return fillUniqueGenerated(Array.from({ length: count }, factory), count, factory);
 }

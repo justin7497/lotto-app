@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { getAuthErrorMessage } from "@/utils/authErrors";
+import { useGoBack } from "@/hooks/useGoBack";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -11,11 +12,13 @@ const inputClass =
 export default function SignUpPage() {
   const { signUpWithEmail, isSignedIn, isLoaded } = useAuth();
   const [, setLocation] = useLocation();
+  const goBack = useGoBack("/");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isSignedIn) setLocation("/generator");
@@ -37,7 +40,8 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       await signUpWithEmail(email, password);
-      setLocation("/generator");
+      setVerifyMessage("가입 확인 메일을 보냈습니다. 메일함에서 인증 후 이용해 주세요.");
+      window.setTimeout(() => setLocation("/generator"), 2000);
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -59,7 +63,7 @@ export default function SignUpPage() {
           />
           <h1 className="text-2xl font-extrabold tracking-tight text-gray-950">회원가입</h1>
           <p className="mt-2 text-sm font-medium text-gray-500">
-            이메일과 비밀번호로 계정을 만드세요
+            이메일 가입 후 앱에서 비밀번호를 관리합니다
           </p>
         </div>
 
@@ -118,6 +122,10 @@ export default function SignUpPage() {
             <p className="text-center text-sm text-red-600">{error}</p>
           )}
 
+          {verifyMessage && (
+            <p className="text-center text-sm font-medium text-[#127a6e]">{verifyMessage}</p>
+          )}
+
           <button
             type="submit"
             disabled={loading || !isLoaded}
@@ -134,12 +142,13 @@ export default function SignUpPage() {
           </Link>
         </p>
 
-        <Link
-          href="/"
-          className="mt-4 block text-center text-sm font-medium text-gray-400 hover:text-gray-600"
+        <button
+          type="button"
+          onClick={goBack}
+          className="mt-4 block w-full text-center text-sm font-medium text-gray-400 hover:text-gray-600"
         >
-          홈으로 돌아가기
-        </Link>
+          이전
+        </button>
       </div>
     </div>
   );

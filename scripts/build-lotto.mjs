@@ -24,15 +24,26 @@ for (const script of [
   "write-lotto-sync.mjs",
   "write-lotto-prizes-sync.mjs",
   "write-lotto-stores-sync.mjs",
+  "enrich-lotto-stores-geocode.mjs",
+  "build-store-win-stats.mjs",
   "verify-lotto-sync.mjs",
   "optimize-illustrations.mjs",
 ]) {
   const sync = spawnSync(process.execPath, [resolve(`scripts/${script}`)], {
     stdio: "inherit",
+    env: { ...process.env, ...lottoEnv },
   });
   if (sync.status !== 0) {
     process.exit(sync.status ?? 1);
   }
+}
+
+const qrImportTest = spawnSync(process.execPath, [resolve("scripts/test-qr-import.mjs")], {
+  stdio: "inherit",
+  env: { ...process.env, ...lottoEnv },
+});
+if (qrImportTest.status !== 0) {
+  process.exit(qrImportTest.status ?? 1);
 }
 
 const typecheck = spawnSync(
@@ -54,6 +65,15 @@ if (typecheck.status !== 0) {
   process.exit(typecheck.status ?? 1);
 }
 
+const appBuildId = new Date().toISOString();
+const versionWrite = spawnSync(process.execPath, [resolve("scripts/write-app-version.mjs")], {
+  stdio: "inherit",
+  env: { ...process.env, ...lottoEnv, VITE_APP_BUILD_ID: appBuildId },
+});
+if (versionWrite.status !== 0) {
+  process.exit(versionWrite.status ?? 1);
+}
+
 const child = spawn(
   pnpmCommand,
   ["pnpm", "--filter", "@workspace/lotto-app", "run", "build"],
@@ -63,6 +83,7 @@ const child = spawn(
     env: {
       ...process.env,
       ...lottoEnv,
+      VITE_APP_BUILD_ID: appBuildId,
       NODE_OPTIONS: process.env.NODE_OPTIONS || "--max-old-space-size=8192",
       PORT: process.env.PORT || "5173",
       BASE_PATH: process.env.BASE_PATH || "/",

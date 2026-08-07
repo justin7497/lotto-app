@@ -24,9 +24,7 @@ export default function StoreQrButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full rounded-2xl font-bold text-white shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-[0.99] ${
-        isLg ? "py-4 px-5 text-lg" : "py-3.5 px-4 text-base"
-      } ${className}`}
+      className={`store-qr-btn ${isLg ? "py-4 px-5 text-lg" : "py-3.5 px-4 text-base"} ${className}`}
     >
       <span className="flex items-center justify-center gap-2.5">
         <QrCode className={isLg ? "w-7 h-7" : "w-6 h-6"} strokeWidth={2.25} />

@@ -1,0 +1,17 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ljh.sowonlotto",
+      "sha256_cert_fingerprints": [
+        "EE:FC:9C:05:D3:2D:D3:F9:44:5B:36:41:AD:3C:8F:5D:FE:2D:4E:A2:A6:95:6E:7B:FD:57:C0:83:CE:72:B8:D9",
+        "9F:29:7E:68:F5:BC:CA:89:A5:42:EA:B9:BA:96:6F:FE:7A:1D:D8:3A:65:21:8F:25:4C:B8:94:44:BD:C3:73:E3",
+        "FE:25:80:BC:3C:A6:84:BA:63:37:45:4C:57:2D:F5:A0:8C:28:0C:CE:EF:06:97:45:73:17:0D:D7:FF:BC:82:4E",
+        "EE:45:8C:5B:8E:03:0D:BE:2C:9F:F2:FB:1D:0F:2C:C5:85:86:2B:EE:C0:F4:74:8C:CD:32:34:60:A8:0D:9B:1A"
+      ]
+    }
+  }
+]

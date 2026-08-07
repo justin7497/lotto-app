@@ -1,5 +1,6 @@
 import type { GeneratedNumbers, LottoNumbers, LottoRound } from "@/data/types";
 import { getNumbers } from "@/utils/analysis";
+import { dedupeGeneratedNumberSets, numberSetKey } from "@/utils/savedNumbers";
 import { calcAC, generateMultiple } from "@/utils/generator";
 
 export interface LottoKingAnalysis {
@@ -57,13 +58,13 @@ function toLottoNumbers(nums: number[]): LottoNumbers {
 }
 
 function ensureGameCount(games: GeneratedNumbers[], target: number, rounds: LottoRound[]): GeneratedNumbers[] {
-  const out = [...games];
-  const seen = new Set(out.map((g) => g.numbers.join(",")));
+  const out = dedupeGeneratedNumberSets(games);
+  const seen = new Set(out.map((g) => numberSetKey(g.numbers)));
   let guard = 0;
   while (out.length < target && guard < 200) {
     guard += 1;
     const extra = generateMultiple(1, "weighted", rounds)[0];
-    const key = extra.numbers.join(",");
+    const key = numberSetKey(extra.numbers);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({ ...extra, mode: "lottoking" });
@@ -162,7 +163,7 @@ export function generateLottoKingHybrid(rounds: LottoRound[], gameCount = 10): G
     }
     if (picked.length < 6) continue;
     const nums = toLottoNumbers(picked);
-    const key = nums.join(",");
+    const key = numberSetKey(nums);
     if (seen.has(key)) continue;
     seen.add(key);
     const overlap = overlapCount(nums, lastNums);
@@ -196,7 +197,7 @@ export function generateLottoKingHybrid(rounds: LottoRound[], gameCount = 10): G
     }
     if (picked.length < 6) continue;
     const nums = toLottoNumbers(picked);
-    const key = nums.join(",");
+    const key = numberSetKey(nums);
     if (seen.has(key)) continue;
     seen.add(key);
     games.push({

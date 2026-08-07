@@ -136,6 +136,18 @@ export const SINGLE_MODES: SingleGeneratorMode[] = [
   "consecutive",
 ];
 
+/** 번호 만들기 탭 기본 노출 (나머지는 더보기) */
+export const PRIMARY_MODES: SingleGeneratorMode[] = [
+  "balanced",
+  "weighted",
+  "monte",
+  "random",
+];
+
+export const EXTRA_MODES: SingleGeneratorMode[] = SINGLE_MODES.filter(
+  (mode) => !PRIMARY_MODES.includes(mode),
+);
+
 export const BULK_MODES: SingleGeneratorMode[] = [
   "balanced",
   "weighted",

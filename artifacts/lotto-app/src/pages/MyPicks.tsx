@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import NumberImportSheet from "@/components/NumberImportSheet";
-import NumberPickBoard, { PickCell } from "@/components/NumberPickBoard";
+import NumberPickBoard from "@/components/NumberPickBoard";
+import NumberPickModal, {
+  MAX_EXCLUDED_NUMBERS,
+  MAX_FIXED_NUMBERS,
+  type NumberPickModalKind,
+} from "@/components/NumberPickModal";
 import PageCard from "@/components/PageCard";
 import { DeleteActionButton, ConfirmActionButton } from "@/components/DeleteConfirmDialog";
 import SlipBallRow from "@/components/SlipBallRow";
 import SavedGamesListHeader from "@/components/SavedGamesListHeader";
-import { TrustStrip } from "@/components/TrustUI";
 import { useFavoritePicks } from "@/hooks/useFavoritePicks";
-import { Lock, Smartphone } from "lucide-react";
+import { Ticket } from "lucide-react";
 import type { SlipGame } from "@/utils/mobileSlip";
 import {
   clearAllFavoritePicks,
@@ -16,140 +19,20 @@ import {
   favoritePickToSlipGame,
   saveFavoritePick,
 } from "@/utils/favoriteNumbers";
+import { SLIP_FIXED_QR_PATH, sendPickToSlip } from "@/utils/sendToSlip";
 
 const ALL_NUMBERS = Array.from({ length: 45 }, (_, i) => i + 1);
 const SLOT_COUNT = 6;
-/** 고정수는 최소 1칸은 자동/수동으로 남김 */
-const MAX_FIXED = 5;
-const MAX_EXCLUDED = 39;
 
 function emptySelection(): Set<number> {
   return new Set();
 }
 
-type ModalKind = "fixed" | "exclude" | null;
-
-function NumberPickModal({
-  kind,
-  draft,
-  blocked,
-  maxCount,
-  hint,
-  onToggle,
-  onReset,
-  onConfirm,
-  onClose,
-}: {
-  kind: "fixed" | "exclude";
-  draft: Set<number>;
-  /** 상대 쪽에서 이미 쓴 번호 — 선택 불가 */
-  blocked: Set<number>;
-  maxCount: number;
-  hint: string | null;
-  onToggle: (n: number) => void;
-  onReset: () => void;
-  onConfirm: () => void;
-  onClose: () => void;
-}) {
-  const title = kind === "fixed" ? "고정수 선택" : "제외수 선택";
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-3 pb-4 sm:pb-0"
-      role="dialog"
-      aria-modal
-      aria-labelledby="pick-modal-title"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl bg-white shadow-xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <h3 id="pick-modal-title" className="text-lg font-bold text-gray-900">
-            {title}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-base font-bold text-gray-800 hover:bg-gray-50"
-          >
-            닫기
-          </button>
-        </div>
-
-        <div className="px-3 pb-3">
-          <div className="pick-board">
-            <div className="pick-board__grid">
-              {ALL_NUMBERS.map((n) => {
-                const isBlocked = blocked.has(n);
-                const isOn = draft.has(n);
-                return (
-                  <PickCell
-                    key={n}
-                    number={n}
-                    selected={isOn}
-                    disabled={isBlocked}
-                    onClick={() => onToggle(n)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 mt-2 px-0.5">
-            {kind === "fixed"
-              ? `* 최대 ${maxCount}개 · 자동 채우기 시 항상 포함`
-              : `* 최대 ${maxCount}개 · 선택·자동에서 제외`}
-            {draft.size > 0 ? ` · 현재 ${draft.size}개` : ""}
-          </p>
-          {hint && (
-            <p className="text-sm text-red-600 mt-1 px-0.5" role="alert">
-              {hint}
-            </p>
-          )}
-        </div>
-
-        <div className="flex gap-2 px-4 pb-4">
-          {draft.size > 0 ? (
-            <ConfirmActionButton
-              label="초기화"
-              tone="neutral"
-              className="flex-1 !rounded-xl !py-3.5 !text-base"
-              confirmTitle={kind === "fixed" ? "고정수 초기화" : "제외수 초기화"}
-              confirmMessage={
-                kind === "fixed"
-                  ? "선택한 고정수를 모두 지울까요?"
-                  : "선택한 제외수를 모두 지울까요?"
-              }
-              confirmLabel="초기화"
-              onConfirm={onReset}
-            />
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="flex-1 rounded-xl border border-gray-200 bg-gray-50 py-3.5 text-base font-bold text-gray-400"
-            >
-              초기화
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="page-cta page-cta--dark flex-1"
-          >
-            확인
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+type ModalKind = NumberPickModalKind | null;
 
 export default function MyPicks() {
   const { picks, loading, refresh } = useFavoritePicks();
   const [, navigate] = useLocation();
-  const openedFromMenuRef = useRef(false);
   const [selected, setSelected] = useState<Set<number>>(emptySelection);
   const [fixedNums, setFixedNums] = useState<Set<number>>(emptySelection);
   const [excludedNums, setExcludedNums] = useState<Set<number>>(emptySelection);
@@ -158,19 +41,14 @@ export default function MyPicks() {
   const [modalHint, setModalHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSavedModal, setShowSavedModal] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
   const [autoSemi, setAutoSemi] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("import") !== "qr") return;
-    openedFromMenuRef.current = true;
-    setImportOpen(true);
-    params.delete("import");
-    const qs = params.toString();
-    const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
-    window.history.replaceState({}, "", next);
-  }, []);
+    if (params.get("import") === "qr") {
+      navigate("/saved-numbers?import=qr");
+    }
+  }, [navigate]);
 
   const selectedList = useMemo(
     () => [...selected].sort((a, b) => a - b),
@@ -219,12 +97,12 @@ export default function MyPicks() {
         setModalHint(null);
         return next;
       }
-      const max = modal === "fixed" ? MAX_FIXED : MAX_EXCLUDED;
+      const max = modal === "fixed" ? MAX_FIXED_NUMBERS : MAX_EXCLUDED_NUMBERS;
       if (next.size >= max) {
         setModalHint(
           modal === "fixed"
-            ? `고정수는 최대 ${MAX_FIXED}개까지`
-            : `제외수는 최대 ${MAX_EXCLUDED}개까지`,
+            ? `고정수는 최대 ${MAX_FIXED_NUMBERS}개까지`
+            : `제외수는 최대 ${MAX_EXCLUDED_NUMBERS}개까지`,
         );
         return prev;
       }
@@ -347,6 +225,19 @@ export default function MyPicks() {
     setShowSavedModal(true);
   }
 
+  function handleSendToSlip() {
+    setError(null);
+    const result = sendPickToSlip(
+      { numbers: selectedList, autoSemi },
+      { source: "mypicks" },
+    );
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    navigate(SLIP_FIXED_QR_PATH);
+  }
+
   async function handleDelete(id: string) {
     await deleteFavoritePick(id);
     refreshPicks();
@@ -358,7 +249,7 @@ export default function MyPicks() {
   }
 
   return (
-    <div className="page-content pb-36">
+    <div className="page-content pb-44">
 
       {previewGame ? (
         <PageCard className="!py-2">
@@ -445,11 +336,11 @@ export default function MyPicks() {
       {loading ? (
         <p className="text-sm text-gray-500 mb-6 text-center">저장 번호 불러오는 중…</p>
       ) : orderedPicks.length > 0 ? (
-        <PageCard>
+        <section className="min-w-0">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <h3 className="text-base font-bold text-gray-900">저장 번호</h3>
+            <h3 className="page-section-title">저장 번호</h3>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-sm text-gray-500">총 {orderedPicks.length}게임</span>
+              <span className="text-base font-semibold text-muted-readable">총 {orderedPicks.length}게임</span>
               <ConfirmActionButton
                 label="전체 삭제"
                 tone="danger"
@@ -462,18 +353,14 @@ export default function MyPicks() {
             </div>
           </div>
           <SavedGamesListHeader />
-          <ul className="slip-games-list space-y-2">
+          <ul className="content-rows">
             {orderedPicks.map((pick) => (
-              <li
-                key={pick.id}
-                className="slip-games-list__row flex items-start gap-1 rounded-xl bg-gray-50 border border-gray-100 px-1.5 py-2"
-              >
+              <li key={pick.id} className="content-row content-row--slip flex items-start gap-1">
                 <div className="flex-1 min-w-0">
                   <SlipBallRow game={favoritePickToSlipGame(pick)} />
                 </div>
                 <DeleteActionButton
-                  size="mini"
-                  className="shrink-0"
+                  size="default"
                   confirmTitle="번호 삭제"
                   confirmMessage="선택한 번호를 삭제할까요?"
                   onConfirm={() => handleDelete(pick.id)}
@@ -481,25 +368,30 @@ export default function MyPicks() {
               </li>
             ))}
           </ul>
-        </PageCard>
+        </section>
       ) : null}
 
       {/* 하단 저장 — 하단 탭 네비 위 */}
-      <div className="fixed inset-x-0 z-40 px-3 pt-3 pb-2 bg-gradient-to-t from-white via-white to-transparent pointer-events-none bottom-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
-        <div className="w-full max-w-none mx-auto pointer-events-auto space-y-2">
-          <TrustStrip
-            className="trust-strip--compact"
-            badges={[
-              { icon: Smartphone, label: "이 기기 저장" },
-              { icon: Lock, label: "로그인 시 백업" },
-            ]}
-          />
+      <div className="page-sticky-footer">
+        <div className="page-sticky-footer__inner">
           <button
             type="button"
             onClick={handleSave}
             className="page-cta page-cta--dark w-full"
           >
             저장
+          </button>
+          <button
+            type="button"
+            onClick={handleSendToSlip}
+            disabled={!previewGame}
+            className="page-cta page-cta--outline w-full flex-col gap-0.5 disabled:opacity-40"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Ticket className="w-5 h-5" strokeWidth={2.5} />
+              슬립지 QR 만들기
+            </span>
+            <span className="text-sm font-medium text-gray-500">판매점 단말기 스캔용</span>
           </button>
         </div>
       </div>
@@ -535,7 +427,7 @@ export default function MyPicks() {
           kind={modal}
           draft={draft}
           blocked={modal === "fixed" ? excludedNums : fixedNums}
-          maxCount={modal === "fixed" ? MAX_FIXED : MAX_EXCLUDED}
+          maxCount={modal === "fixed" ? MAX_FIXED_NUMBERS : MAX_EXCLUDED_NUMBERS}
           hint={modalHint}
           onToggle={toggleDraft}
           onReset={() => {
@@ -551,21 +443,9 @@ export default function MyPicks() {
         />
       )}
 
-      <p className="text-sm text-gray-400 mt-2 text-center mb-24">
-        슬립지에서 「내번호」로 불러올 수 있습니다
+      <p className="text-sm text-gray-400 mt-2 text-center mb-28">
+        슬립지 QR로 바로 구매하거나, 저장해 두었다가 다시 불러올 수 있습니다
       </p>
-
-      <NumberImportSheet
-        open={importOpen}
-        onClose={() => {
-          setImportOpen(false);
-          if (openedFromMenuRef.current) {
-            openedFromMenuRef.current = false;
-            navigate("/");
-          }
-        }}
-        onSaved={() => refreshPicks()}
-      />
     </div>
   );
 }

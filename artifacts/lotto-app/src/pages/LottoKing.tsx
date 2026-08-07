@@ -1,43 +1,35 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Crown, RotateCcw, Share2, X } from "lucide-react";
+import { Crown, Minus, Plus, RotateCcw, X } from "lucide-react";
 import LottoBall from "@/components/LottoBall";
+import LottoKingAnalysisSheet from "@/components/LottoKingAnalysisSheet";
 import LottoKingGuideSheet from "@/components/LottoKingGuideSheet";
 import PageCard from "@/components/PageCard";
 import PageGuideBar from "@/components/PageGuideBar";
-import SavedSourceList from "@/components/SavedSourceList";
-import SaveNumbersButton from "@/components/SaveNumbersButton";
-import SendToSlipButton from "@/components/SendToSlipButton";
+import {
+  RecommendFooterSaveActions,
+  RecommendStickyFooter,
+} from "@/components/RecommendSaveActions";
 import { useLottoContext } from "@/context/LottoDataContext";
 import type { GeneratedNumbers } from "@/data/types";
 import { analyzeLottoKingWindow, generateLottoKingHybrid, getCoverageStats } from "@/utils/lottoKing";
+import { autoSaveGeneratedSets } from "@/utils/autoSaveNumbers";
 import { formatPercent, probAtLeastOne3Plus } from "@/utils/lottoProbability";
-import { getRoundTag, isDuplicateNumberSets, saveNumberSets } from "@/utils/savedNumbers";
+import { getRoundTag, isDuplicateNumberSets, fillUniqueForWeek } from "@/utils/savedNumbers";
 import { useSavedSets } from "@/hooks/useSavedSets";
 
-const GAME_COUNT = 5;
-const KING_COUNT = 4;
-const COVER_COUNT = 1;
+const DEFAULT_GAME_COUNT = 5;
+const MIN_GAME_COUNT = 1;
+const MAX_GAME_COUNT = 10;
+
+function getLottoKingComposition(gameCount: number) {
+  const patternCount = Math.min(6, gameCount);
+  const coverCount = Math.max(0, gameCount - patternCount);
+  return { patternCount, coverCount };
+}
 
 function getScore(item: GeneratedNumbers): number {
   return typeof item.score === "number" ? item.score : 0;
-}
-
-function StatBar({ label, count, pct, accent = false }: { label: string; count: number; pct: number; accent?: boolean }) {
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className={`w-10 shrink-0 font-medium ${accent ? "text-gray-700" : "text-gray-500"}`}>{label}</span>
-      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full ${accent ? "bg-gray-500" : "bg-gray-300"}`}
-          style={{ width: `${Math.min(100, pct)}%` }}
-        />
-      </div>
-      <span className="w-16 shrink-0 text-right text-gray-500 tabular-nums">
-        {count}회 ({pct}%)
-      </span>
-    </div>
-  );
 }
 
 export default function LottoKing() {
@@ -48,13 +40,31 @@ export default function LottoKing() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [gameCount, setGameCount] = useState(DEFAULT_GAME_COUNT);
   const { sets: existingSets, setSets: setExistingSets } = useSavedSets();
-  const resultRef = useRef<HTMLDivElement>(null);
+
+  const composition = useMemo(() => getLottoKingComposition(gameCount), [gameCount]);
+  const canEditGameCount = !generating;
 
   const analysis = useMemo(() => analyzeLottoKingWindow(allRounds, 20), [allRounds]);
 
   const coverage = useMemo(() => getCoverageStats(results), [results]);
-  const expected5th = useMemo(() => probAtLeastOne3Plus(results.length || GAME_COUNT), [results.length]);
+  const expected5th = useMemo(
+    () => probAtLeastOne3Plus(results.length || gameCount),
+    [results.length, gameCount],
+  );
+
+  function changeGameCount(next: number) {
+    const clamped = Math.min(MAX_GAME_COUNT, Math.max(MIN_GAME_COUNT, next));
+    setGameCount(clamped);
+    if (results.length > 0) {
+      setResults([]);
+      setSaved(false);
+      setSaveError(null);
+      setIsDuplicate(false);
+    }
+  }
 
   function handleGenerate() {
     setGenerating(true);
@@ -65,9 +75,16 @@ export default function LottoKing() {
 
     setTimeout(async () => {
       try {
-        const generated = generateLottoKingHybrid(allRounds, GAME_COUNT);
+        const factory = () => generateLottoKingHybrid(allRounds, 1)[0];
+        const generated = fillUniqueForWeek(
+          generateLottoKingHybrid(allRounds, gameCount),
+          gameCount,
+          factory,
+          existingSets,
+        );
         setResults(generated);
-        setIsDuplicate(await isDuplicateNumberSets(generated, existingSets));
+        const dup = await isDuplicateNumberSets(generated, existingSets);
+        setIsDuplicate(dup);
       } catch (err) {
         setSaveError(
           err instanceof Error ? `생성 실패 · ${err.message}` : "생성 실패 · 다시 시도",
@@ -82,68 +99,68 @@ export default function LottoKing() {
   async function handleSave() {
     if (results.length === 0 || saved || isDuplicate) return;
     setSaveError(null);
-    if (results.length !== GAME_COUNT) {
-      setSaveError(`게임 수가 ${results.length}개입니다. 다시 생성해 주세요. (목표 ${GAME_COUNT}게임)`);
+    const dup = await isDuplicateNumberSets(results, existingSets);
+    if (dup) {
+      setIsDuplicate(true);
       return;
     }
-    const result = await saveNumberSets(results, `소원 ${GAME_COUNT}게임`);
-    if (result.ok) {
+    const saveResult = await autoSaveGeneratedSets(results, `행운 · 패턴번호 ${results.length}게임`);
+    if (saveResult.status === "saved") {
       setSaved(true);
-      setExistingSets((prev) => [result.set, ...prev]);
-      return;
-    }
-    setSaveError(result.error);
-  }
-
-  async function handleShare() {
-    const text = results
-      .map((r, i) => `${String(i + 1).padStart(2, "0")}. ${r.numbers.join(", ")} ${r.summary ?? ""}`)
-      .join("\n");
-    const shareText = `${getRoundTag()} 소원 ${GAME_COUNT}게임 추천\n\n${text}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `소원 ${GAME_COUNT}게임 추천`, text: shareText });
-      } catch {
-        await navigator.clipboard.writeText(shareText);
-        alert("클립보드에 복사되었습니다!");
-      }
-    } else {
-      await navigator.clipboard.writeText(shareText);
-      alert("클립보드에 복사되었습니다!");
-    }
-  }
-
-  async function handleSaveImage() {
-    if (!resultRef.current) return;
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(resultRef.current, { backgroundColor: "#fff", scale: 2, useCORS: true });
-      const url = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `lottoking_10_${Date.now()}.png`;
-      a.click();
-    } catch {
-      alert("이미지 저장 중 오류가 발생했습니다.");
+      setExistingSets((prev) => [saveResult.set, ...prev]);
+    } else if (saveResult.status === "duplicate") {
+      setIsDuplicate(true);
+    } else if (saveResult.status === "error") {
+      setSaveError(saveResult.message);
     }
   }
 
   return (
-    <div className="page-content">
+    <div className="page-content page-content--generator">
       <PageGuideBar
         tag={getRoundTag()}
-        guideLabel="소원 설명"
+        guideLabel="방식 설명"
         onGuide={() => setShowGuide(true)}
+        analysisLabel="최근 분석"
+        onAnalysis={() => setShowAnalysis(true)}
       />
 
       <LottoKingGuideSheet open={showGuide} onClose={() => setShowGuide(false)} />
+      <LottoKingAnalysisSheet
+        open={showAnalysis}
+        analysis={analysis}
+        onClose={() => setShowAnalysis(false)}
+      />
 
-      <PageCard className="!p-3">
+      <PageCard className="!p-3 mb-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div>
           <p className="text-xs text-gray-400">생성 게임</p>
-          <p className="text-2xl font-extrabold text-gray-900">
-            {results.length > 0 ? results.length : GAME_COUNT}게임
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => changeGameCount(gameCount - 1)}
+              disabled={!canEditGameCount || gameCount <= MIN_GAME_COUNT}
+              className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-35"
+              aria-label="게임 수 줄이기"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="text-2xl font-extrabold text-gray-900 min-w-[3.5rem] text-center">
+              {results.length > 0 ? results.length : gameCount}게임
+            </span>
+            <button
+              type="button"
+              onClick={() => changeGameCount(gameCount + 1)}
+              disabled={!canEditGameCount || gameCount >= MAX_GAME_COUNT}
+              className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-35"
+              aria-label="게임 수 늘리기"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-[0.68rem] text-gray-400 mt-1">
+            {MIN_GAME_COUNT}~{MAX_GAME_COUNT}게임
           </p>
         </div>
         <div>
@@ -153,7 +170,8 @@ export default function LottoKing() {
         <div>
           <p className="text-xs text-gray-400">구성</p>
           <p className="text-lg font-extrabold text-gray-900">
-            패턴 {KING_COUNT} + 커버 {COVER_COUNT}
+            패턴 {composition.patternCount}
+            {composition.coverCount > 0 ? ` + 커버 ${composition.coverCount}` : ""}
           </p>
         </div>
         <div>
@@ -175,119 +193,11 @@ export default function LottoKing() {
         </div>
       </PageCard>
 
-      {analysis && (
-        <PageCard>
-          <h3 className="text-sm font-bold text-gray-800 mb-3">최근 {analysis.windowSize}회 분석 (소원 기준)</h3>
-          <div className="grid sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <p className="text-xs font-semibold text-gray-500 mb-2">직전 회차 번호 중복</p>
-              <div className="space-y-1.5">
-                {analysis.overlapStats.map((s) => (
-                  <StatBar key={s.label} label={s.label} count={s.count} pct={s.pct} accent={s.label === "1개" || s.label === "2개"} />
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-500 mb-2">연번 출현</p>
-              <div className="space-y-1.5">
-                {analysis.consecutiveStats.map((s) => (
-                  <StatBar key={s.label} label={s.label} count={s.count} pct={s.pct} accent={s.label === "1쌍"} />
-                ))}
-              </div>
-              <p className="text-caption text-gray-400 mt-2">3연번 이상: {analysis.threePlusRunPct}%</p>
-              {analysis.consecZoneStats.length > 0 && (
-                <div className="mt-3">
-                  <p className="text-xs font-semibold text-gray-500 mb-2">연번 구간 분포</p>
-                  <div className="space-y-1.5">
-                    {analysis.consecZoneStats.map((s) => (
-                      <StatBar key={s.label} label={s.label} count={s.count} pct={s.pct} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">
-              {analysis.lastRoundNo}회 당첨번호 — 직전 반복 비율
-            </p>
-            <div className="ball-row ball-row--fluid">
-              {analysis.lastRoundNumbers.map((n) => (
-                <LottoBall key={n} number={n} size="sm" />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
-              {analysis.numberRepeatRates.map(({ number, rate }) => (
-                <span key={number}>
-                  <span className="font-semibold text-gray-700">{number}</span> {rate}%
-                </span>
-              ))}
-            </div>
-          </div>
-        </PageCard>
-      )}
-
-      <button
-        type="button"
-        onClick={handleGenerate}
-        disabled={generating || allRounds.length === 0}
-        className="page-cta page-cta--dark w-full mb-4 disabled:opacity-50"
-      >
-        {generating ? (
-          <>
-            <RotateCcw className="w-5 h-5 animate-spin" />
-            소원 분석 중...
-          </>
-        ) : allRounds.length === 0 ? (
-          <>
-            <X className="w-5 h-5" />
-            로또 데이터를 불러오는 중입니다
-          </>
-        ) : (
-          <>
-            <Crown className="w-5 h-5" />
-            소원 {GAME_COUNT}게임 생성하기
-          </>
-        )}
-      </button>
-
       <AnimatePresence>
         {results.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            {saveError && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                {saveError}
-              </div>
-            )}
-
-            <div className="space-y-3 mb-4">
-              <SaveNumbersButton
-                onClick={() => void handleSave()}
-                saved={saved}
-                isDuplicate={isDuplicate}
-                tone="amber"
-              />
-              <SendToSlipButton games={results} source="king" />
-              <div className="flex gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={handleShare}
-                className="page-cta page-cta--secondary px-4"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveImage}
-                className="page-cta page-cta--secondary px-4"
-              >
-                <Download className="w-4 h-4" />
-              </button>
-              </div>
-            </div>
-
             <PageCard>
-            <div ref={resultRef} className="space-y-2">
+            <div className="space-y-2">
               {results.length > 0 && (
                 <div className={`rounded-xl px-3 py-2 text-xs mb-2 ${
                   coverage.coveragePct >= 100
@@ -376,7 +286,42 @@ export default function LottoKing() {
         )}
       </AnimatePresence>
 
-      <SavedSourceList source="king" title="저장된 소원 번호" />
+      <RecommendStickyFooter
+        hint={results.length === 0 ? "번호 생성 후 「나의 로또번호에 저장」이 나타납니다" : undefined}
+      >
+        {results.length > 0 ? (
+          <RecommendFooterSaveActions
+            saved={saved}
+            isDuplicate={isDuplicate}
+            saveError={saveError}
+            onSave={() => void handleSave()}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating || allRounds.length === 0}
+            className="page-cta page-cta--dark page-cta--large w-full disabled:opacity-50"
+          >
+            {generating ? (
+              <>
+                <RotateCcw className="w-5 h-5 animate-spin" />
+                패턴 분석 중...
+              </>
+            ) : allRounds.length === 0 ? (
+              <>
+                <X className="w-5 h-5" />
+                로또 데이터를 불러오는 중입니다
+              </>
+            ) : (
+              <>
+                <Crown className="w-5 h-5" />
+                패턴 {gameCount}게임 생성하기
+              </>
+            )}
+          </button>
+        )}
+      </RecommendStickyFooter>
     </div>
   );
 }

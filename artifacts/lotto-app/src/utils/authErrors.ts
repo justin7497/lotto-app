@@ -36,6 +36,12 @@ export function getAuthErrorMessage(err: unknown): string {
       return "비밀번호는 6자 이상이어야 합니다.";
     case "auth/too-many-requests":
       return "시도 횟수가 많습니다. 잠시 후 다시 시도해 주세요.";
+    case "auth/requires-recent-login":
+      return "보안을 위해 다시 로그인한 뒤 비밀번호를 변경해 주세요.";
+    case "auth/expired-action-code":
+      return "비밀번호 재설정 링크가 만료되었습니다. 로그인 화면에서 다시 요청해 주세요.";
+    case "auth/invalid-action-code":
+      return "비밀번호 재설정 링크가 유효하지 않습니다. 로그인 화면에서 다시 요청해 주세요.";
     case "auth/operation-not-allowed":
       return "이메일/비밀번호 로그인이 비활성화되어 있습니다. Firebase 콘솔 → Authentication → 이메일/비밀번호를 사용 설정해 주세요.";
     case "auth/network-request-failed":

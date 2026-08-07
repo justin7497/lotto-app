@@ -19,6 +19,12 @@ export const LOTTO_PRODUCT_CODE = "10645";
 /** 실물 슬립지 1장(A~E)당 게임 수 */
 export const GAMES_PER_SLIP = 5;
 
+/** 게임 수 → 실물 슬립지 장수 (5게임 단위 올림) */
+export function countSlipSheets(gameCount: number): number {
+  if (gameCount <= 0) return 0;
+  return Math.ceil(gameCount / GAMES_PER_SLIP);
+}
+
 export type SlipPickMode = "M" | "A";
 
 export interface SlipGame {
@@ -140,6 +146,18 @@ export function encodeMobileSlip(games: SlipGame[], productCode = LOTTO_PRODUCT_
   return `${body}${sum}|`;
 }
 
+/** SlipGame[] → 단말기 QR 페이로드 (5게임 초과 시 블록 연결) */
+export function encodeGamesToMobileSlipPayload(
+  games: SlipGame[],
+  productCode = LOTTO_PRODUCT_CODE,
+): string {
+  if (games.length === 0) throw new Error("게임이 없습니다.");
+  if (games.length <= GAMES_PER_SLIP) {
+    return encodeMobileSlip(games, productCode);
+  }
+  return encodeMobileSlipPayload(games);
+}
+
 /** 판매점 단말기용 전체 페이로드 — 모든 게임을 한 QR에 (5게임 단위 블록 연결) */
 export function encodeMobileSlipPayload(games: SlipGame[]): string {
   const body = buildMultiSlipBody(games);
@@ -182,13 +200,14 @@ export function parseMobileSlip(payload: string): {
   checksumOk: boolean;
 } | null {
   const m = payload.match(
-    /^MSG_ESLIP\{(\d+)\}\{((?:\(\d+,(?:[MAH]:\d{0,12},?)*\))+)\}\{\}([0-9A-Fa-f]{2})\|$/,
+    /^MSG_ESLIP\{(\d+)\}\{((?:\(\d+,(?:[MAH]:\d{0,12},?)*\))+)\}\{\}([0-9A-Fa-f]{2})?\|?$/,
   );
   if (!m) return null;
   const [, productCode, blocksRaw, checksum] = m;
-  const body = payload.slice(0, -3);
-  const checksumOk =
-    crc8(body).toString(16).toUpperCase().padStart(2, "0") === checksum.toUpperCase();
+  const body = checksum ? payload.slice(0, -3) : payload.replace(/\|?$/, "");
+  const checksumOk = checksum
+    ? crc8(body).toString(16).toUpperCase().padStart(2, "0") === checksum.toUpperCase()
+    : false;
 
   const games: SlipGame[] = [];
   let slipCount = 0;

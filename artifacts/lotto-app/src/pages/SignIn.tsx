@@ -1,7 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { getAuthErrorMessage } from "@/utils/authErrors";
+import { syncUserCloudData } from "@/utils/userCloudSync";
+import { useGoBack } from "@/hooks/useGoBack";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -9,28 +11,69 @@ const inputClass =
   "w-full rounded-xl border border-amber-100 bg-amber-50/40 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200";
 
 export default function SignInPage() {
-  const { signInWithEmail, isSignedIn, isLoaded } = useAuth();
+  const { signInWithEmail, requestPasswordReset, isSignedIn, isLoaded } = useAuth();
   const [, setLocation] = useLocation();
+  const goBack = useGoBack("/");
+  const emailRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [resetFeedback, setResetFeedback] = useState<string | null>(null);
+  const [emailRequired, setEmailRequired] = useState(false);
 
   useEffect(() => {
-    if (isSignedIn) setLocation("/generator");
+    if (isSignedIn) setLocation("/");
   }, [isSignedIn, setLocation]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+    setLoginError(null);
+    setResetFeedback(null);
+    setEmailRequired(false);
     try {
       await signInWithEmail(email, password);
-      setLocation("/generator");
+      await syncUserCloudData();
+      setLocation("/");
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      setLoginError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResetPassword() {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setEmailRequired(true);
+      setResetFeedback(null);
+      setLoginError(null);
+      emailRef.current?.focus();
+      return;
+    }
+
+    setResetLoading(true);
+    setLoginError(null);
+    setResetFeedback(null);
+    setEmailRequired(false);
+    try {
+      const result = await requestPasswordReset(trimmed);
+      if (result.resetUrl) {
+        const url = new URL(result.resetUrl);
+        const base = basePath || "";
+        const path = base && url.pathname.startsWith(base)
+          ? url.pathname.slice(base.length) || "/"
+          : url.pathname;
+        setLocation(`${path}${url.search}`);
+        return;
+      }
+      setResetFeedback("등록된 이메일이 아니거나 요청을 처리하지 못했습니다. 이메일 주소를 확인해 주세요.");
+    } catch (err) {
+      setResetFeedback(getAuthErrorMessage(err));
+    } finally {
+      setResetLoading(false);
     }
   }
 
@@ -58,15 +101,26 @@ export default function SignInPage() {
               이메일
             </label>
             <input
+              ref={emailRef}
               id="email"
               type="email"
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (e.target.value.trim()) setEmailRequired(false);
+              }}
               placeholder="example@email.com"
-              className={inputClass}
+              className={`${inputClass} ${emailRequired ? "border-red-300 ring-2 ring-red-100 focus:border-red-400 focus:ring-red-200" : ""}`}
+              aria-invalid={emailRequired}
+              aria-describedby={emailRequired ? "email-reset-hint" : undefined}
             />
+            {emailRequired ? (
+              <p id="email-reset-hint" className="mt-1.5 text-sm text-red-600">
+                이메일을 먼저 입력해 주세요.
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -86,9 +140,7 @@ export default function SignInPage() {
             />
           </div>
 
-          {error && (
-            <p className="text-center text-sm text-red-600">{error}</p>
-          )}
+          {loginError ? <p className="text-center text-sm text-red-600">{loginError}</p> : null}
 
           <button
             type="submit"
@@ -99,6 +151,31 @@ export default function SignInPage() {
           </button>
         </form>
 
+        <section
+          className="mt-4 rounded-xl border border-amber-100 bg-amber-50/40 px-4 py-4"
+          aria-label="비밀번호 재설정"
+        >
+          <p className="text-center text-sm leading-6 text-gray-600">
+            비밀번호를 잊으셨다면 이메일을 입력한 후 아래 버튼을 눌러 주세요.
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleResetPassword()}
+            disabled={resetLoading || loading || !isLoaded}
+            className="mt-3 h-11 w-full rounded-xl border-2 border-amber-400 bg-white text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {resetLoading ? "준비 중…" : "비밀번호 재설정"}
+          </button>
+          {resetFeedback ? (
+            <p
+              className={`mt-3 text-center text-sm ${resetFeedback.includes("확인") ? "text-red-600" : "text-[#127a6e]"}`}
+              role="status"
+            >
+              {resetFeedback}
+            </p>
+          ) : null}
+        </section>
+
         <p className="mt-5 text-center text-sm text-gray-500">
           계정이 없으신가요?{" "}
           <Link href="/sign-up" className="font-semibold text-amber-600 hover:text-amber-700">
@@ -106,12 +183,13 @@ export default function SignInPage() {
           </Link>
         </p>
 
-        <Link
-          href="/"
-          className="mt-4 block text-center text-sm font-medium text-gray-400 hover:text-gray-600"
+        <button
+          type="button"
+          onClick={goBack}
+          className="mt-4 block w-full text-center text-sm font-medium text-gray-400 hover:text-gray-600"
         >
-          홈으로 돌아가기
-        </Link>
+          이전
+        </button>
       </div>
     </div>
   );

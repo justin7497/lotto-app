@@ -1,20 +1,22 @@
 import { BookOpen, X } from "lucide-react";
-import { SAJU_WEEKLY_GAME_COUNT } from "@/utils/sajuLucky";
+import { SAJU_DAILY_GAME_COUNT } from "@/utils/sajuLucky";
+import { useOverlayBack } from "@/hooks/useOverlayBack";
 
 interface SajuGuideSheetProps {
   open: boolean;
   onClose: () => void;
 }
 
-const GAME_COUNT = SAJU_WEEKLY_GAME_COUNT;
+const GAME_COUNT = SAJU_DAILY_GAME_COUNT;
 
 export default function SajuGuideSheet({ open, onClose }: SajuGuideSheetProps) {
+  const closeSheet = useOverlayBack(open, onClose);
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
-      onClick={onClose}
+      onClick={closeSheet}
     >
       <div
         className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88vh] overflow-y-auto"
@@ -29,7 +31,7 @@ export default function SajuGuideSheet({ open, onClose }: SajuGuideSheetProps) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeSheet}
             className="p-2.5 rounded-full hover:bg-gray-100 text-gray-500 shrink-0"
             aria-label="닫기"
           >
@@ -43,7 +45,7 @@ export default function SajuGuideSheet({ open, onClose }: SajuGuideSheetProps) {
             <p className="text-base text-gray-700 leading-relaxed">
               <span className="font-semibold text-gray-800">개요:</span>{" "}
               입력하신 생년월일·출생 시간(시진)·혈액형을 바탕으로 사주팔자를 계산하고,
-              매주 한 번 <strong>{GAME_COUNT}게임(1만 원 권)</strong> 행운번호를 자동으로 추천하는 방식입니다.
+              <strong>오늘 요일</strong>에 맞춰 <strong>{GAME_COUNT}게임(1만 원 권)</strong> 행운번호를 자동으로 추천하는 방식입니다.
             </p>
           </section>
 
@@ -81,10 +83,10 @@ export default function SajuGuideSheet({ open, onClose }: SajuGuideSheetProps) {
             <h4 className="text-lg font-extrabold text-gray-900 mb-2">3. 이용 방법 및 특징</h4>
             <ul className="text-base text-gray-700 leading-relaxed space-y-2">
               <li>
-                <strong className="text-gray-800">내 정보 입력:</strong> 생년월일·시진·혈액형은 <strong>이 기기에 자동 저장</strong>됩니다. 다시 열어도 그대로 불러옵니다.
+                <strong className="text-gray-800">내 정보 입력:</strong> 생년월일·시진·혈액형을 입력하면 다시 열어도 그대로 불러옵니다.
               </li>
               <li>
-                <strong className="text-gray-800">주간 {GAME_COUNT}게임:</strong> 매주 「이번 주 사주 {GAME_COUNT}게임 받기」로 번호를 받을 수 있으며, 이번 주 번호는 앱을 닫았다 열어도 유지됩니다.
+                <strong className="text-gray-800">오늘 {GAME_COUNT}게임:</strong> 매일 「오늘 행운번호 {GAME_COUNT}게임 받기」로 번호를 받을 수 있으며, 오늘 받은 번호는 앱을 닫았다 열어도 유지됩니다. 날짜가 바뀌면 새로 받을 수 있습니다.
               </li>
               <li>
                 <strong className="text-gray-800">QR 코드 활용:</strong> 번호 생성 후 「판매점 스캐너에 인식 요청해 주세요」를 눌러 QR을 보여 주면, 종이 슬립지에 펜으로 직접 마킹할 필요 없이 바로 구매할 수 있습니다.

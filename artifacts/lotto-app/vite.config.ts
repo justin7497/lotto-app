@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import { readFileSync, existsSync } from "fs";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const rawPort = process.env.PORT;
@@ -26,8 +27,20 @@ if (!basePath) {
   );
 }
 
+const appBuildId = (() => {
+  const buildIdPath = path.resolve(import.meta.dirname, ".app-build-id");
+  if (existsSync(buildIdPath)) {
+    return readFileSync(buildIdPath, "utf8").trim();
+  }
+  if (process.env.VITE_APP_BUILD_ID) return process.env.VITE_APP_BUILD_ID;
+  return "dev";
+})();
+
 export default defineConfig({
   base: basePath,
+  define: {
+    "import.meta.env.VITE_APP_BUILD_ID": JSON.stringify(appBuildId),
+  },
   plugins: [
     react(),
     tailwindcss({ optimize: false }),

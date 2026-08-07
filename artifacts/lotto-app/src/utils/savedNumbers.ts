@@ -8,12 +8,23 @@ import {
   setDoc,
   writeBatch,
 } from "firebase/firestore";
+import {
+  loadPrintDoneKeys,
+  printDoneKey,
+  savePrintDoneKeys,
+} from "@/utils/printDone";
 import type { GeneratedNumbers, GeneratorMode, LottoRound } from "@/data/types";
 import { db, isFirebaseConfigured } from "@/lib/firebase";
+import { ensureAuthTokenReady, getAuthUserId } from "@/utils/authReady";
 
 const MIGRATION_KEY = "lotto_migrated_firestore_v1";
 const LEGACY_KEY = "lotto_saved_numbers";
 const LOCAL_KEY = "lotto_saved_sets_v4";
+const ARCHIVE_KEY = "lotto_saved_sets_archive_v1";
+
+export type SavedSetMutationResult =
+  | { ok: true }
+  | { ok: false; error: string };
 
 type UserIdGetter = () => string | null;
 let userIdGetter: UserIdGetter | null = null;
@@ -43,6 +54,8 @@ export interface SavedSet {
   savedAt: string;
   roundTag: string;
   subLabel?: string | null;
+  /** 판매점 출력 완료 — 클라우드 동기화용 */
+  printDone?: boolean;
 }
 
 export interface WinResult {
@@ -53,6 +66,8 @@ export interface WinResult {
 }
 
 function getCurrentUserId(): string | null {
+  const direct = getAuthUserId();
+  if (direct) return direct;
   if (!userIdGetter) return null;
   try {
     return userIdGetter();
@@ -104,20 +119,36 @@ function toIsoSavedAt(value: unknown): string {
 
 function normalizeSavedSet(row: SavedSet & { saved_at?: string }): SavedSet {
   const savedAt = toIsoSavedAt(row.savedAt ?? row.saved_at);
-  return { ...row, savedAt };
+  return { ...row, savedAt, printDone: Boolean(row.printDone) || undefined };
 }
 
 /** Firestore는 undefined 필드를 거부하므로 저장용으로만 직렬화 */
-function sanitizeGame(game: GeneratedNumbers): GeneratedNumbers {
+function isImportPickGame(game: GeneratedNumbers): boolean {
+  return game.slipPickMode === "A" || game.slipPickMode === "M";
+}
+
+function sanitizeGame(game: GeneratedNumbers): GeneratedNumbers | null {
+  const pickMode = game.slipPickMode;
   const numbers = (Array.isArray(game.numbers) ? game.numbers : [])
     .map((n) => Number(n))
     .filter((n) => Number.isInteger(n) && n >= 1 && n <= 45)
-    .slice(0, 6) as GeneratedNumbers["numbers"];
+    .sort((a, b) => a - b);
+
+  if (new Set(numbers).size !== numbers.length) return null;
+
+  if (pickMode === "A") {
+    if (numbers.length !== 0) return null;
+  } else if (pickMode === "M") {
+    if (numbers.length < 1 || numbers.length > 6) return null;
+  } else if (numbers.length !== 6) {
+    return null;
+  }
 
   const out: GeneratedNumbers = {
-    numbers,
+    numbers: numbers as GeneratedNumbers["numbers"],
     mode: game.mode ?? "random",
   };
+  if (pickMode) out.slipPickMode = pickMode;
   if (typeof game.bonus === "number") out.bonus = game.bonus;
   if (typeof game.acValue === "number") out.acValue = game.acValue;
   if (typeof game.score === "number") out.score = game.score;
@@ -129,7 +160,7 @@ function sanitizeGame(game: GeneratedNumbers): GeneratedNumbers {
 function sanitizeSavedSet(set: SavedSet): SavedSet {
   const sets = (Array.isArray(set.sets) ? set.sets : [])
     .map(sanitizeGame)
-    .filter((g) => g.numbers.length === 6);
+    .filter((g): g is GeneratedNumbers => g !== null);
 
   return {
     id: String(set.id),
@@ -179,6 +210,50 @@ function saveLocalSavedSets(rows: SavedSet[]): void {
   }
 }
 
+function loadArchivedSavedSets(): SavedSet[] {
+  return readLocalKey(ARCHIVE_KEY);
+}
+
+function saveArchivedSavedSets(rows: SavedSet[]): void {
+  try {
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(mergeSavedSets(rows)));
+  } catch {
+    /* ignore */
+  }
+}
+
+function archiveSavedSets(rows: SavedSet[]): void {
+  if (rows.length === 0) return;
+  saveArchivedSavedSets(mergeSavedSets(rows, loadArchivedSavedSets()));
+}
+
+function collectRestorableSavedSets(remote: SavedSet[]): SavedSet[] {
+  return mergeSavedSets(
+    remote,
+    loadLocalSavedSets(),
+    readLocalKey(LEGACY_KEY),
+    loadArchivedSavedSets(),
+  );
+}
+
+async function restoreMissingSavedSetsToFirestore(uid: string): Promise<number> {
+  const remote = await loadFromFirestore(uid);
+  const candidates = collectRestorableSavedSets(remote);
+  archiveSavedSets(candidates);
+
+  const remoteIds = new Set(remote.map((row) => row.id));
+  let restored = 0;
+  for (const set of candidates) {
+    if (remoteIds.has(set.id)) continue;
+    if (await saveToFirestore(uid, set)) restored += 1;
+  }
+  return restored;
+}
+
+export function canDeleteSavedNumbers(): boolean {
+  return !(getCurrentUserId() && isFirebaseConfigured);
+}
+
 function appendLocalSavedSet(set: SavedSet): void {
   saveLocalSavedSets(mergeSavedSets([set], loadLocalSavedSets()));
 }
@@ -190,7 +265,7 @@ function removeLocalSavedSetIds(ids: Set<string>): void {
 
 function toFirestoreDoc(set: SavedSet) {
   const clean = sanitizeSavedSet(set);
-  return {
+  const doc: Record<string, unknown> = {
     id: clean.id,
     sets: clean.sets,
     mode: clean.mode,
@@ -198,6 +273,18 @@ function toFirestoreDoc(set: SavedSet) {
     roundTag: clean.roundTag,
     subLabel: clean.subLabel ?? null,
   };
+  if (clean.printDone) doc.printDone = true;
+  return doc;
+}
+
+function applyPrintDoneFromSets(sets: SavedSet[]): void {
+  const keys = loadPrintDoneKeys();
+  const merged = new Set(keys);
+  for (const set of sets) {
+    if (set.printDone) merged.add(printDoneKey(set.id));
+  }
+  if (merged.size === keys.size && [...merged].every((k) => keys.has(k))) return;
+  savePrintDoneKeys(merged);
 }
 
 async function loadFromFirestore(uid: string): Promise<SavedSet[]> {
@@ -291,17 +378,40 @@ export async function loadSavedSets(): Promise<SavedSet[]> {
     return local;
   }
 
+  if (!(await ensureAuthTokenReady())) {
+    return mergeSavedSets(local, loadArchivedSavedSets());
+  }
+
   await syncLocalToFirestore(uid);
 
   const remote = await loadFromFirestore(uid);
-  return mergeSavedSets(remote, loadLocalSavedSets());
+  const restored = await restoreMissingSavedSetsToFirestore(uid);
+  const mergedRemote = restored > 0 ? await loadFromFirestore(uid) : remote;
+  const merged = mergeSavedSets(mergedRemote, loadLocalSavedSets(), loadArchivedSavedSets());
+  applyPrintDoneFromSets(merged);
+  return merged;
+}
+
+/** 로그인 사용자: 로컬·아카이브에 남아 있는 지난 회차 번호를 Firestore로 복구 */
+export async function restoreSavedSetsFromArchive(): Promise<number> {
+  const uid = getCurrentUserId();
+  if (!uid || !isFirebaseConfigured) return 0;
+  if (!(await ensureAuthTokenReady())) return 0;
+  const restored = await restoreMissingSavedSetsToFirestore(uid);
+  if (restored > 0) notifySavedSetsInvalidate();
+  return restored;
 }
 
 export async function saveNumberSets(
   sets: GeneratedNumbers[],
   subLabel?: string,
+  roundTagOverride?: string,
 ): Promise<SaveNumberSetsResult> {
-  if (sets.length === 0) {
+  const existing = await loadSavedSets();
+  const importBatch = sets.some(isImportPickGame);
+  const prepared = importBatch ? sets : dedupeGeneratedNumberSets(sets);
+  const uniqueSets = importBatch ? prepared : excludeSameWeekSaved(prepared, existing);
+  if (uniqueSets.length === 0) {
     return {
       ok: false,
       set: {
@@ -309,23 +419,24 @@ export async function saveNumberSets(
         sets: [],
         mode: "random",
         savedAt: new Date().toISOString(),
-        roundTag: getRoundTag(),
+        roundTag: roundTagOverride ?? getRoundTag(),
       },
-      error: "저장할 번호가 없습니다.",
+      error: importBatch ? "저장할 번호가 없습니다." : "이번 주에 이미 저장한 번호입니다.",
     };
   }
 
   const newSet = sanitizeSavedSet({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    sets,
-    mode: sets[0]?.mode ?? "random",
+    sets: uniqueSets,
+    mode: uniqueSets[0]?.mode ?? "random",
     savedAt: new Date().toISOString(),
-    roundTag: getRoundTag(),
+    roundTag: roundTagOverride ?? getRoundTag(),
     subLabel: subLabel ?? null,
   });
 
   const uid = getCurrentUserId();
   appendLocalSavedSet(newSet);
+  archiveSavedSets([newSet]);
 
   if (uid && isFirebaseConfigured) {
     const saved = await saveToFirestore(uid, newSet);
@@ -338,7 +449,7 @@ export async function saveNumberSets(
     return {
       ok: false,
       set: newSet,
-      error: "Firebase 저장에 실패했습니다. 이 기기에는 저장됐습니다.",
+      error: "Firebase 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
     };
   }
 
@@ -346,16 +457,101 @@ export async function saveNumberSets(
   return { ok: true, set: newSet };
 }
 
-export async function deleteNumberSet(id: string): Promise<void> {
+export async function deleteNumberSet(id: string): Promise<SavedSetMutationResult> {
+  if (!canDeleteSavedNumbers()) {
+    return {
+      ok: false,
+      error: "로그인한 계정의 저장번호는 삭제할 수 없습니다.",
+    };
+  }
+
   const uid = getCurrentUserId();
   if (uid && isFirebaseConfigured) {
     await deleteFromFirestore(uid, id);
   }
   removeLocalSavedSetIds(new Set([id]));
   notifySavedSetsInvalidate();
+  return { ok: true };
 }
 
-export async function clearAllSavedSets(): Promise<void> {
+function replaceLocalSavedSet(set: SavedSet): void {
+  const all = loadLocalSavedSets();
+  const index = all.findIndex((row) => row.id === set.id);
+  if (index >= 0) all[index] = set;
+  else all.push(set);
+  saveLocalSavedSets(all);
+}
+
+export async function removeGameFromSavedSet(
+  savedSetId: string,
+  gameIndex: number,
+): Promise<SavedSetMutationResult> {
+  if (!canDeleteSavedNumbers()) {
+    return {
+      ok: false,
+      error: "로그인한 계정의 저장번호는 삭제할 수 없습니다.",
+    };
+  }
+
+  const all = await loadSavedSets();
+  const saved = all.find((row) => row.id === savedSetId);
+  if (!saved) return { ok: false, error: "번호를 찾을 수 없습니다." };
+  if (gameIndex < 0 || gameIndex >= saved.sets.length) {
+    return { ok: false, error: "번호를 찾을 수 없습니다." };
+  }
+  if (saved.sets.length <= 1) return deleteNumberSet(savedSetId);
+
+  const updated = sanitizeSavedSet({
+    ...saved,
+    sets: saved.sets.filter((_, index) => index !== gameIndex),
+  });
+
+  replaceLocalSavedSet(updated);
+  const uid = getCurrentUserId();
+  if (uid && isFirebaseConfigured) {
+    await saveToFirestore(uid, updated);
+  }
+  notifySavedSetsInvalidate();
+  return { ok: true };
+}
+
+export async function removeGamesFromSavedSets(
+  items: Array<{ savedSetId: string; gameIndex: number }>,
+): Promise<SavedSetMutationResult> {
+  if (!canDeleteSavedNumbers()) {
+    return {
+      ok: false,
+      error: "로그인한 계정의 저장번호는 삭제할 수 없습니다.",
+    };
+  }
+  if (items.length === 0) return { ok: true };
+
+  const bySet = new Map<string, number[]>();
+  for (const item of items) {
+    const list = bySet.get(item.savedSetId) ?? [];
+    list.push(item.gameIndex);
+    bySet.set(item.savedSetId, list);
+  }
+
+  for (const [savedSetId, indices] of bySet) {
+    const sorted = [...new Set(indices)].sort((a, b) => b - a);
+    for (const gameIndex of sorted) {
+      const result = await removeGameFromSavedSet(savedSetId, gameIndex);
+      if (!result.ok) return result;
+    }
+  }
+
+  return { ok: true };
+}
+
+export async function clearAllSavedSets(): Promise<SavedSetMutationResult> {
+  if (!canDeleteSavedNumbers()) {
+    return {
+      ok: false,
+      error: "로그인한 계정의 저장번호는 전체 삭제할 수 없습니다.",
+    };
+  }
+
   const uid = getCurrentUserId();
   if (uid && isFirebaseConfigured) {
     await clearFirestore(uid);
@@ -367,23 +563,159 @@ export async function clearAllSavedSets(): Promise<void> {
     /* ignore */
   }
   notifySavedSetsInvalidate();
+  return { ok: true };
+}
+
+/** 출력완료 상태를 로컬·Firestore에 반영 (당첨 현황 클라우드 복구용) */
+export async function setSavedSetPrintDone(setId: string, done: boolean): Promise<void> {
+  const uid = getCurrentUserId();
+  const local = loadLocalSavedSets();
+  const idx = local.findIndex((s) => s.id === setId);
+  if (idx >= 0) {
+    const updated = { ...local[idx], printDone: done || undefined };
+    const next = [...local];
+    next[idx] = updated;
+    saveLocalSavedSets(next);
+  }
+
+  if (uid && isFirebaseConfigured && db) {
+    try {
+      await setDoc(
+        doc(savedSetsCollection(uid), setId),
+        { printDone: done },
+        { merge: true },
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export function numberSetKey(numbers: readonly number[]): string {
+  return [...numbers].sort((a, b) => a - b).join(",");
+}
+
+function bundleKey(sets: { numbers: number[] }[]): string {
+  return dedupeGeneratedNumberSets(sets)
+    .map((s) => numberSetKey(s.numbers))
+    .sort()
+    .join("|");
+}
+
+/** 이번 주(현재 회차)에 저장된 세트만 */
+export function sameWeekSavedSets(existing: SavedSet[]): SavedSet[] {
+  const tag = getRoundTag();
+  return existing.filter((saved) => saved.roundTag === tag);
+}
+
+/** 이번 주에 이미 저장한 6개 번호 조합 */
+export function sameWeekNumberKeys(existing: SavedSet[]): Set<string> {
+  const keys = new Set<string>();
+  for (const saved of sameWeekSavedSets(existing)) {
+    for (const game of saved.sets) {
+      if (game.numbers?.length === 6) {
+        keys.add(numberSetKey(game.numbers));
+      }
+    }
+  }
+  return keys;
+}
+
+/** 동일한 6개 번호 조합 제거 (순서 무관) */
+export function dedupeGeneratedNumberSets<
+  T extends { numbers: number[]; slipPickMode?: import("@/utils/mobileSlip").SlipPickMode },
+>(sets: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const row of sets) {
+    if (!row.numbers) continue;
+    if (row.slipPickMode === "A") {
+      if (row.numbers.length !== 0) continue;
+      const key = "auto";
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(row);
+      continue;
+    }
+    if (row.slipPickMode === "M") {
+      if (row.numbers.length < 1 || row.numbers.length > 6) continue;
+      const key = `m:${numberSetKey(row.numbers)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(row);
+      continue;
+    }
+    if (row.numbers.length !== 6) continue;
+    const key = numberSetKey(row.numbers);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
+/** 이번 주 저장분과 겹치는 게임 제외 */
+export function excludeSameWeekSaved(
+  sets: GeneratedNumbers[],
+  existing: SavedSet[],
+): GeneratedNumbers[] {
+  const savedKeys = sameWeekNumberKeys(existing);
+  const seen = new Set<string>();
+  const out: GeneratedNumbers[] = [];
+  for (const row of dedupeGeneratedNumberSets(sets)) {
+    const key = numberSetKey(row.numbers);
+    if (savedKeys.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
+/**
+ * 한 세트 안·이번 주 저장분 모두 고려해 서로 다른 번호만 채움.
+ * 차주에는 같은 번호를 다시 추천·저장할 수 있습니다.
+ */
+export function fillUniqueForWeek(
+  sets: GeneratedNumbers[],
+  target: number,
+  factory: () => GeneratedNumbers,
+  existing: SavedSet[],
+): GeneratedNumbers[] {
+  const out = excludeSameWeekSaved(sets, existing);
+  const seen = new Set(out.map((s) => numberSetKey(s.numbers)));
+  for (const key of sameWeekNumberKeys(existing)) {
+    seen.add(key);
+  }
+
+  let guard = 0;
+  while (out.length < target && guard < target * 120) {
+    guard += 1;
+    const next = factory();
+    if (!next.numbers || next.numbers.length !== 6) continue;
+    const key = numberSetKey(next.numbers);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(next);
+  }
+  return out.slice(0, target);
 }
 
 export async function isDuplicateNumberSets(
   sets: GeneratedNumbers[],
   existing: SavedSet[],
 ): Promise<boolean> {
-  const incomingKey = sets
-    .map((s) => [...s.numbers].sort((a, b) => a - b).join(","))
-    .sort()
-    .join("|");
-  return existing.some((saved) => {
-    const savedKey = saved.sets
-      .map((s) => [...s.numbers].sort((a, b) => a - b).join(","))
-      .sort()
-      .join("|");
-    return savedKey === incomingKey;
-  });
+  const unique = dedupeGeneratedNumberSets(sets);
+  if (unique.length === 0) return true;
+
+  const sameWeek = sameWeekSavedSets(existing);
+  if (sameWeek.length === 0) return false;
+
+  const incomingKey = bundleKey(unique);
+  if (sameWeek.some((saved) => bundleKey(saved.sets) === incomingKey)) {
+    return true;
+  }
+
+  return excludeSameWeekSaved(unique, existing).length === 0;
 }
 
 export function parseRoundNo(roundTag: string): number | null {

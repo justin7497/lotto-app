@@ -10,6 +10,7 @@ import {
   type HeavenlyStem,
 } from "manseryeok";
 import type { GeneratedNumbers, LottoNumbers } from "@/data/types";
+import { dedupeGeneratedNumberSets, numberSetKey } from "@/utils/savedNumbers";
 
 export type BloodType = "A" | "B" | "O" | "AB" | "unknown";
 
@@ -212,7 +213,8 @@ export function getClockTimeLabel(hour: number, minute: number): string {
 
 function normalizeSajuInput(data: Partial<SajuInput> & { hour?: number; minute?: number }): SajuInput | null {
   if (!data.year || !data.month || !data.day) return null;
-  const bloodType = data.bloodType ?? "unknown";
+  const rawBlood = data.bloodType ?? "A";
+  const bloodType: BloodType = rawBlood === "unknown" ? "A" : rawBlood;
   let hour = typeof data.hour === "number" ? data.hour : 12;
   let minute = typeof data.minute === "number" ? data.minute : 0;
 
@@ -321,8 +323,43 @@ export function buildSajuProfile(input: SajuInput): SajuProfile {
   };
 }
 
+export const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
+
+export function getKstDateParts(date = new Date()): {
+  year: number;
+  month: number;
+  day: number;
+  weekday: number;
+} {
+  const KST = 9 * 60 * 60 * 1000;
+  const kst = new Date(date.getTime() + KST);
+  return {
+    year: kst.getUTCFullYear(),
+    month: kst.getUTCMonth() + 1,
+    day: kst.getUTCDate(),
+    weekday: kst.getUTCDay(),
+  };
+}
+
+export function getSajuDayKey(date = new Date()): string {
+  const { year, month, day } = getKstDateParts(date);
+  return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
+}
+
+export function getSajuWeekdayLabel(date = new Date()): string {
+  const { weekday } = getKstDateParts(date);
+  return KOREAN_WEEKDAYS[weekday];
+}
+
+export function formatSajuDayTag(date = new Date()): string {
+  const { year, month, day, weekday } = getKstDateParts(date);
+  const m = String(month).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}.${m}.${d} (${KOREAN_WEEKDAYS[weekday]})`;
+}
+
 export function buildDailySajuContent(profile: SajuProfile, date = new Date()): DailySajuContent {
-  const day = date.getDay();
+  const { weekday: day } = getKstDateParts(date);
   const topElement = (Object.entries(profile.elementCounts) as [FiveElement, number][])
     .sort((a, b) => b[1] - a[1])[0][0];
   const weakElement = (Object.entries(profile.elementCounts) as [FiveElement, number][])
@@ -370,10 +407,22 @@ function pickWeighted(weights: Float32Array): number {
   return 45;
 }
 
-export function generateSajuLuckyGames(profile: SajuProfile, gameCount = 5): GeneratedNumbers[] {
+export function generateSajuLuckyGames(
+  profile: SajuProfile,
+  gameCount = 5,
+  date = new Date(),
+): GeneratedNumbers[] {
+  const { weekday } = getKstDateParts(date);
+  const weekdayLabel = KOREAN_WEEKDAYS[weekday];
   const weights = new Float32Array(46);
   for (let i = 1; i <= 45; i++) weights[i] = 1;
   for (const n of profile.luckyPool) weights[n] += 5;
+  if (profile.luckyPool.length > 0) {
+    for (let i = 0; i < 6; i++) {
+      const n = profile.luckyPool[(weekday * 5 + i * 7) % profile.luckyPool.length];
+      weights[n] += 3;
+    }
+  }
 
   const results: GeneratedNumbers[] = [];
   const usedKeys = new Set<string>();
@@ -393,26 +442,35 @@ export function generateSajuLuckyGames(profile: SajuProfile, gameCount = 5): Gen
       }
       if (picked.size !== 6) continue;
       const nums = [...picked].sort((a, b) => a - b);
-      const key = nums.join(",");
+      const key = numberSetKey(nums);
       if (usedKeys.has(key)) continue;
       best = nums;
       break;
     }
     if (!best) {
-      best = shuffle(Array.from({ length: 45 }, (_, i) => i + 1))
-        .slice(0, 6)
-        .sort((a, b) => a - b);
+      let guard = 0;
+      while (guard++ < 80) {
+        const candidate = shuffle(Array.from({ length: 45 }, (_, i) => i + 1))
+          .slice(0, 6)
+          .sort((a, b) => a - b);
+        const key = numberSetKey(candidate);
+        if (!usedKeys.has(key)) {
+          best = candidate;
+          break;
+        }
+      }
     }
-    usedKeys.add(best.join(","));
+    if (!best) break;
+    usedKeys.add(numberSetKey(best));
     const fromPool = best.filter((n) => profile.luckyPool.includes(n)).length;
     results.push({
       numbers: best as LottoNumbers,
       mode: "saju",
-      summary: `사주풀 ${fromPool}개 · 일간 ${profile.dayMaster}`,
+      summary: `${weekdayLabel}요일 · 사주풀 ${fromPool}개`,
     });
   }
 
-  return results;
+  return dedupeGeneratedNumberSets(results);
 }
 
 export const BLOOD_OPTIONS: { value: BloodType; label: string }[] = [
@@ -420,10 +478,11 @@ export const BLOOD_OPTIONS: { value: BloodType; label: string }[] = [
   { value: "B", label: "B형" },
   { value: "O", label: "O형" },
   { value: "AB", label: "AB형" },
-  { value: "unknown", label: "모름" },
 ];
 
 const STORAGE_KEY = "lotto_saju_profile_v2";
+const INFO_READY_KEY = "lotto_saju_info_ready_v1";
+const DAILY_KEY = "lotto_saju_daily_v1";
 const WEEKLY_KEY = "lotto_saju_weekly_v1";
 
 /** 로또 회차(주간) 키 — 나의 번호 roundTag와 동일 기준 */
@@ -453,14 +512,42 @@ export function loadSajuInput(): SajuInput | null {
   }
 }
 
-export function saveSajuInput(input: SajuInput): void {
+export function isSajuInfoReady(): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(input));
+    return localStorage.getItem(INFO_READY_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markSajuInfoReady(): void {
+  try {
+    localStorage.setItem(INFO_READY_KEY, "1");
   } catch {
     /* ignore */
   }
 }
 
+export function saveSajuInput(input: SajuInput): void {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...input, updatedAt: new Date().toISOString() }),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+export interface SajuDailyBundle {
+  dayKey: string;
+  weekday: string;
+  games: GeneratedNumbers[];
+  input: SajuInput;
+  savedAt: string;
+}
+
+/** @deprecated 주간 저장 — 일일 저장으로 대체됨 */
 export interface SajuWeeklyBundle {
   weekKey: string;
   games: GeneratedNumbers[];
@@ -468,6 +555,44 @@ export interface SajuWeeklyBundle {
   savedAt: string;
 }
 
+export function loadDailySajuGames(date = new Date()): SajuDailyBundle | null {
+  const dayKey = getSajuDayKey(date);
+  try {
+    const raw = localStorage.getItem(DAILY_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as SajuDailyBundle;
+    if (!data?.dayKey || !Array.isArray(data.games) || data.games.length === 0) return null;
+    if (data.dayKey !== dayKey) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function saveDailySajuGames(
+  games: GeneratedNumbers[],
+  input: SajuInput,
+  date = new Date(),
+): void {
+  try {
+    const bundle: SajuDailyBundle = {
+      dayKey: getSajuDayKey(date),
+      weekday: getSajuWeekdayLabel(date),
+      games,
+      input,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(DAILY_KEY, JSON.stringify(bundle));
+  } catch {
+    /* ignore */
+  }
+}
+
+export const SAJU_DAILY_GAME_COUNT = 5;
+/** @deprecated SAJU_DAILY_GAME_COUNT 사용 */
+export const SAJU_WEEKLY_GAME_COUNT = SAJU_DAILY_GAME_COUNT;
+
+/** @deprecated loadDailySajuGames 사용 */
 export function loadWeeklySajuGames(): SajuWeeklyBundle | null {
   try {
     const raw = localStorage.getItem(WEEKLY_KEY);
@@ -481,6 +606,7 @@ export function loadWeeklySajuGames(): SajuWeeklyBundle | null {
   }
 }
 
+/** @deprecated saveDailySajuGames 사용 */
 export function saveWeeklySajuGames(games: GeneratedNumbers[], input: SajuInput): void {
   try {
     const bundle: SajuWeeklyBundle = {
@@ -495,11 +621,9 @@ export function saveWeeklySajuGames(games: GeneratedNumbers[], input: SajuInput)
   }
 }
 
-export const SAJU_WEEKLY_GAME_COUNT = 5;
-
-export function clearWeeklySajuGames(): void {
+export function clearDailySajuGames(): void {
   try {
-    localStorage.removeItem(WEEKLY_KEY);
+    localStorage.removeItem(DAILY_KEY);
   } catch {
     /* ignore */
   }

@@ -6,10 +6,12 @@ import HomeMainGrid from "@/components/HomeMainGrid";
 import IllustImage from "@/components/IllustImage";
 import LottoBall from "@/components/LottoBall";
 import QrHubSheet from "@/components/QrHubSheet";
+import RecommendMethodsSheet from "@/components/RecommendMethodsSheet";
 import { useAuth } from "@/context/AuthContext";
 import { useHomeTheme } from "@/context/HomeThemeContext";
 import { useLottoContext } from "@/context/LottoDataContext";
 import { settingsCategoryLabel, type HomeCategoryId } from "@/data/homeMenuData";
+import { APP_ICON_CUTOUT_SRC } from "@/data/appBrand";
 import { allThemesImagePaths } from "@/data/homeThemes";
 import { preloadIllustrations } from "@/utils/preloadIllustrations";
 
@@ -53,9 +55,10 @@ function HeroActions({
 export default function Dashboard() {
   const { latestRound, updateMsg, updateFailed } = useLottoContext();
   const { isSignedIn, isLoaded } = useAuth();
-  const { heroImage, tagline, mainGrid } = useHomeTheme();
+  const { mainGrid } = useHomeTheme();
   const [, navigate] = useLocation();
   const [qrWinOpen, setQrWinOpen] = useState(false);
+  const [recommendOpen, setRecommendOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<HomeCategoryId | null>(null);
 
@@ -83,7 +86,24 @@ export default function Dashboard() {
     : null;
 
   function openCategory(id: HomeCategoryId) {
+    if (id === "mobile-slip") {
+      navigate("/slip");
+      return;
+    }
+    if (id === "my-lotto-numbers") {
+      navigate("/saved-numbers");
+      return;
+    }
+    if (id === "guide") {
+      setRecommendOpen(true);
+      return;
+    }
     setActiveCategory(id);
+    setCategoryOpen(true);
+  }
+
+  function openGuide() {
+    setActiveCategory("guide");
     setCategoryOpen(true);
   }
 
@@ -98,27 +118,32 @@ export default function Dashboard() {
         <header className="mania-hero">
           <div className="mania-hero__top">
             <div className="mania-hero__brand-row">
-              <IllustImage
-                src={heroImage}
-                className="mania-hero__mascot"
-                loading="eager"
-                fetchPriority="high"
-              />
-              <div className="mania-hero__brand-info">
-                <p className="mania-hero__brand-line">
-                  <span>소원로또</span>
-                  {latestRound ? (
-                    <span className="mania-hero__round-inline"> · 제{latestRound.drwNo}회</span>
-                  ) : null}
-                </p>
-                <p className="mania-hero__brand-tagline">{tagline}</p>
+              <div className="mania-hero__brand-left" aria-label="소원로또">
+                <IllustImage
+                  src={APP_ICON_CUTOUT_SRC}
+                  className="mania-hero__app-icon"
+                  loading="eager"
+                  fetchPriority="high"
+                />
+                <div className="mania-hero__brand-info">
+                  <p className="mania-hero__brand-line">
+                    <span>소원로또</span>
+                  </p>
+                </div>
               </div>
+              {latestRound ? (
+                <div className="mania-hero__brand-meta">
+                  <span className="mania-hero__round-badge">제{latestRound.drwNo}회</span>
+                  <span className="mania-hero__date-badge">
+                    {formatDrawDate(latestRound.drwNoDate)}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
 
           {latestRound ? (
             <div className="mania-hero__draw">
-              <p className="mania-hero__date">{formatDrawDate(latestRound.drwNoDate)}</p>
               <div className="mania-hero__balls ball-row">
                 {wins!.map((n, i) => (
                   <LottoBall
@@ -164,7 +189,7 @@ export default function Dashboard() {
           ) : null}
         </header>
         <div className="mania-home__scroll">
-          <HomeMainGrid items={mainGridItems} onSelect={openCategory} />
+          <HomeMainGrid items={mainGridItems} onSelect={openCategory} onGuideOpen={openGuide} />
         </div>
       </div>
 
@@ -174,6 +199,7 @@ export default function Dashboard() {
         onClose={closeCategory}
       />
       <QrHubSheet open={qrWinOpen} onClose={() => setQrWinOpen(false)} />
+      <RecommendMethodsSheet open={recommendOpen} onClose={() => setRecommendOpen(false)} />
     </>
   );
 }

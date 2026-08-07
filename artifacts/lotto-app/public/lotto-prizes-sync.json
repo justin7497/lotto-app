@@ -1,0 +1,2264 @@
+{
+  "updatedAt": "2026-08-07T22:17:32.834Z",
+  "latestDrwNo": 1235,
+  "fromDrwNo": 1176,
+  "rounds": {
+    "1175": {
+      "drwNo": 1175,
+      "drwNoDate": "2025-06-07",
+      "totalSales": 58744152500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 20,
+          "amount": 1384026094,
+          "totalAmount": 27680521880
+        },
+        {
+          "rank": 2,
+          "winners": 92,
+          "amount": 50145873,
+          "totalAmount": 4613420316
+        },
+        {
+          "rank": 3,
+          "winners": 3178,
+          "amount": 1451675,
+          "totalAmount": 4613423150
+        },
+        {
+          "rank": 4,
+          "winners": 164364,
+          "amount": 50000,
+          "totalAmount": 8218200000
+        },
+        {
+          "rank": 5,
+          "winners": 2723718,
+          "amount": 5000,
+          "totalAmount": 13618590000
+        }
+      ]
+    },
+    "1176": {
+      "drwNo": 1176,
+      "drwNoDate": "2025-06-14",
+      "totalSales": 57882725000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 13,
+          "amount": 2052166154,
+          "totalAmount": 26678160002
+        },
+        {
+          "rank": 2,
+          "winners": 89,
+          "amount": 49959102,
+          "totalAmount": 4446360078
+        },
+        {
+          "rank": 3,
+          "winners": 3533,
+          "amount": 1258523,
+          "totalAmount": 4446361759
+        },
+        {
+          "rank": 4,
+          "winners": 171545,
+          "amount": 50000,
+          "totalAmount": 8577250000
+        },
+        {
+          "rank": 5,
+          "winners": 2746919,
+          "amount": 5000,
+          "totalAmount": 13734595000
+        }
+      ]
+    },
+    "1177": {
+      "drwNo": 1177,
+      "drwNoDate": "2025-06-21",
+      "totalSales": 57705916000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 6,
+          "amount": 4576672000,
+          "totalAmount": 27460032000
+        },
+        {
+          "rank": 2,
+          "winners": 75,
+          "amount": 61022294,
+          "totalAmount": 4576672050
+        },
+        {
+          "rank": 3,
+          "winners": 3111,
+          "amount": 1471126,
+          "totalAmount": 4576672986
+        },
+        {
+          "rank": 4,
+          "winners": 157438,
+          "amount": 50000,
+          "totalAmount": 7871900000
+        },
+        {
+          "rank": 5,
+          "winners": 2644128,
+          "amount": 5000,
+          "totalAmount": 13220640000
+        }
+      ]
+    },
+    "1178": {
+      "drwNo": 1178,
+      "drwNoDate": "2025-06-28",
+      "totalSales": 59387139500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 12,
+          "amount": 2391608407,
+          "totalAmount": 28699300884
+        },
+        {
+          "rank": 2,
+          "winners": 89,
+          "amount": 53744010,
+          "totalAmount": 4783216890
+        },
+        {
+          "rank": 3,
+          "winners": 3061,
+          "amount": 1562633,
+          "totalAmount": 4783219613
+        },
+        {
+          "rank": 4,
+          "winners": 157044,
+          "amount": 50000,
+          "totalAmount": 7852200000
+        },
+        {
+          "rank": 5,
+          "winners": 2653841,
+          "amount": 5000,
+          "totalAmount": 13269205000
+        }
+      ]
+    },
+    "1179": {
+      "drwNo": 1179,
+      "drwNoDate": "2025-07-05",
+      "totalSales": 57512339000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 13,
+          "amount": 2162821097,
+          "totalAmount": 28116674261
+        },
+        {
+          "rank": 2,
+          "winners": 63,
+          "amount": 74382737,
+          "totalAmount": 4686112431
+        },
+        {
+          "rank": 3,
+          "winners": 2989,
+          "amount": 1567787,
+          "totalAmount": 4686115343
+        },
+        {
+          "rank": 4,
+          "winners": 148832,
+          "amount": 50000,
+          "totalAmount": 7441600000
+        },
+        {
+          "rank": 5,
+          "winners": 2516368,
+          "amount": 5000,
+          "totalAmount": 12581840000
+        }
+      ]
+    },
+    "1180": {
+      "drwNo": 1180,
+      "drwNoDate": "2025-07-12",
+      "totalSales": 57688982500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 11,
+          "amount": 2535566421,
+          "totalAmount": 27891230631
+        },
+        {
+          "rank": 2,
+          "winners": 72,
+          "amount": 64563034,
+          "totalAmount": 4648538448
+        },
+        {
+          "rank": 3,
+          "winners": 3010,
+          "amount": 1544365,
+          "totalAmount": 4648538650
+        },
+        {
+          "rank": 4,
+          "winners": 153274,
+          "amount": 50000,
+          "totalAmount": 7663700000
+        },
+        {
+          "rank": 5,
+          "winners": 2567395,
+          "amount": 5000,
+          "totalAmount": 12836975000
+        }
+      ]
+    },
+    "1181": {
+      "drwNo": 1181,
+      "drwNoDate": "2025-07-19",
+      "totalSales": 56901341000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 17,
+          "amount": 1593643500,
+          "totalAmount": 27091939500
+        },
+        {
+          "rank": 2,
+          "winners": 86,
+          "amount": 52503759,
+          "totalAmount": 4515323274
+        },
+        {
+          "rank": 3,
+          "winners": 3109,
+          "amount": 1452340,
+          "totalAmount": 4515325060
+        },
+        {
+          "rank": 4,
+          "winners": 155938,
+          "amount": 50000,
+          "totalAmount": 7796900000
+        },
+        {
+          "rank": 5,
+          "winners": 2596371,
+          "amount": 5000,
+          "totalAmount": 12981855000
+        }
+      ]
+    },
+    "1182": {
+      "drwNo": 1182,
+      "drwNoDate": "2025-07-26",
+      "totalSales": 57715654000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 13,
+          "amount": 2124785424,
+          "totalAmount": 27622210512
+        },
+        {
+          "rank": 2,
+          "winners": 79,
+          "amount": 58274706,
+          "totalAmount": 4603701774
+        },
+        {
+          "rank": 3,
+          "winners": 3015,
+          "amount": 1526933,
+          "totalAmount": 4603702995
+        },
+        {
+          "rank": 4,
+          "winners": 156025,
+          "amount": 50000,
+          "totalAmount": 7801250000
+        },
+        {
+          "rank": 5,
+          "winners": 2616958,
+          "amount": 5000,
+          "totalAmount": 13084790000
+        }
+      ]
+    },
+    "1183": {
+      "drwNo": 1183,
+      "drwNoDate": "2025-08-02",
+      "totalSales": 57802984000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 13,
+          "amount": 2073966000,
+          "totalAmount": 26961558000
+        },
+        {
+          "rank": 2,
+          "winners": 92,
+          "amount": 48843403,
+          "totalAmount": 4493593076
+        },
+        {
+          "rank": 3,
+          "winners": 3623,
+          "amount": 1240297,
+          "totalAmount": 4493596031
+        },
+        {
+          "rank": 4,
+          "winners": 169030,
+          "amount": 50000,
+          "totalAmount": 8451500000
+        },
+        {
+          "rank": 5,
+          "winners": 2680548,
+          "amount": 5000,
+          "totalAmount": 13402740000
+        }
+      ]
+    },
+    "1184": {
+      "drwNo": 1184,
+      "drwNoDate": "2025-08-09",
+      "totalSales": 58874462000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 15,
+          "amount": 1910655600,
+          "totalAmount": 28659834000
+        },
+        {
+          "rank": 2,
+          "winners": 95,
+          "amount": 50280411,
+          "totalAmount": 4776639045
+        },
+        {
+          "rank": 3,
+          "winners": 3115,
+          "amount": 1533432,
+          "totalAmount": 4776640680
+        },
+        {
+          "rank": 4,
+          "winners": 155556,
+          "amount": 50000,
+          "totalAmount": 7777800000
+        },
+        {
+          "rank": 5,
+          "winners": 2576710,
+          "amount": 5000,
+          "totalAmount": 12883550000
+        }
+      ]
+    },
+    "1185": {
+      "drwNo": 1185,
+      "drwNoDate": "2025-08-16",
+      "totalSales": 58740402000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 12,
+          "amount": 2388695125,
+          "totalAmount": 28664341500
+        },
+        {
+          "rank": 2,
+          "winners": 79,
+          "amount": 60473295,
+          "totalAmount": 4777390305
+        },
+        {
+          "rank": 3,
+          "winners": 2903,
+          "amount": 1645674,
+          "totalAmount": 4777391622
+        },
+        {
+          "rank": 4,
+          "winners": 153798,
+          "amount": 50000,
+          "totalAmount": 7689900000
+        },
+        {
+          "rank": 5,
+          "winners": 2566276,
+          "amount": 5000,
+          "totalAmount": 12831380000
+        }
+      ]
+    },
+    "1186": {
+      "drwNo": 1186,
+      "drwNoDate": "2025-08-23",
+      "totalSales": 58345369000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 14,
+          "amount": 1985676911,
+          "totalAmount": 27799476754
+        },
+        {
+          "rank": 2,
+          "winners": 89,
+          "amount": 52058946,
+          "totalAmount": 4633246194
+        },
+        {
+          "rank": 3,
+          "winners": 3226,
+          "amount": 1436221,
+          "totalAmount": 4633248946
+        },
+        {
+          "rank": 4,
+          "winners": 162707,
+          "amount": 50000,
+          "totalAmount": 8135350000
+        },
+        {
+          "rank": 5,
+          "winners": 2628810,
+          "amount": 5000,
+          "totalAmount": 13144050000
+        }
+      ]
+    },
+    "1187": {
+      "drwNo": 1187,
+      "drwNoDate": "2025-08-30",
+      "totalSales": 58825423500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 11,
+          "amount": 2619380012,
+          "totalAmount": 28813180132
+        },
+        {
+          "rank": 2,
+          "winners": 79,
+          "amount": 60787300,
+          "totalAmount": 4802196700
+        },
+        {
+          "rank": 3,
+          "winners": 3147,
+          "amount": 1525961,
+          "totalAmount": 4802199267
+        },
+        {
+          "rank": 4,
+          "winners": 152448,
+          "amount": 50000,
+          "totalAmount": 7622400000
+        },
+        {
+          "rank": 5,
+          "winners": 2557090,
+          "amount": 5000,
+          "totalAmount": 12785450000
+        }
+      ]
+    },
+    "1188": {
+      "drwNo": 1188,
+      "drwNoDate": "2025-09-06",
+      "totalSales": 58308985500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 24,
+          "amount": 1074625172,
+          "totalAmount": 25791004128
+        },
+        {
+          "rank": 2,
+          "winners": 111,
+          "amount": 38725232,
+          "totalAmount": 4298500752
+        },
+        {
+          "rank": 3,
+          "winners": 3713,
+          "amount": 1157690,
+          "totalAmount": 4298502970
+        },
+        {
+          "rank": 4,
+          "winners": 188314,
+          "amount": 50000,
+          "totalAmount": 9415700000
+        },
+        {
+          "rank": 5,
+          "winners": 2901056,
+          "amount": 5000,
+          "totalAmount": 14505280000
+        }
+      ]
+    },
+    "1189": {
+      "drwNo": 1189,
+      "drwNoDate": "2025-09-13",
+      "totalSales": 59742342500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 13,
+          "amount": 2263651299,
+          "totalAmount": 29427466887
+        },
+        {
+          "rank": 2,
+          "winners": 167,
+          "amount": 29368730,
+          "totalAmount": 4904577910
+        },
+        {
+          "rank": 3,
+          "winners": 3121,
+          "amount": 1571477,
+          "totalAmount": 4904579717
+        },
+        {
+          "rank": 4,
+          "winners": 152345,
+          "amount": 50000,
+          "totalAmount": 7617250000
+        },
+        {
+          "rank": 5,
+          "winners": 2577694,
+          "amount": 5000,
+          "totalAmount": 12888470000
+        }
+      ]
+    },
+    "1190": {
+      "drwNo": 1190,
+      "drwNoDate": "2025-09-20",
+      "totalSales": 59184430500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 6,
+          "amount": 4622793813,
+          "totalAmount": 27736762878
+        },
+        {
+          "rank": 2,
+          "winners": 113,
+          "amount": 40909680,
+          "totalAmount": 4622793840
+        },
+        {
+          "rank": 3,
+          "winners": 3293,
+          "amount": 1403825,
+          "totalAmount": 4622795725
+        },
+        {
+          "rank": 4,
+          "winners": 168764,
+          "amount": 50000,
+          "totalAmount": 8438200000
+        },
+        {
+          "rank": 5,
+          "winners": 2752776,
+          "amount": 5000,
+          "totalAmount": 13763880000
+        }
+      ]
+    },
+    "1191": {
+      "drwNo": 1191,
+      "drwNoDate": "2025-09-27",
+      "totalSales": 60636404500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 18,
+          "amount": 1536334355,
+          "totalAmount": 27654018390
+        },
+        {
+          "rank": 2,
+          "winners": 132,
+          "amount": 34916690,
+          "totalAmount": 4609003080
+        },
+        {
+          "rank": 3,
+          "winners": 3649,
+          "amount": 1263087,
+          "totalAmount": 4609004463
+        },
+        {
+          "rank": 4,
+          "winners": 184758,
+          "amount": 50000,
+          "totalAmount": 9237900000
+        },
+        {
+          "rank": 5,
+          "winners": 2905296,
+          "amount": 5000,
+          "totalAmount": 14526480000
+        }
+      ]
+    },
+    "1192": {
+      "drwNo": 1192,
+      "drwNoDate": "2025-10-04",
+      "totalSales": 64525098000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 29,
+          "amount": 1079546587,
+          "totalAmount": 31306851023
+        },
+        {
+          "rank": 2,
+          "winners": 95,
+          "amount": 54924300,
+          "totalAmount": 5217808500
+        },
+        {
+          "rank": 3,
+          "winners": 3476,
+          "amount": 1501096,
+          "totalAmount": 5217809696
+        },
+        {
+          "rank": 4,
+          "winners": 171551,
+          "amount": 50000,
+          "totalAmount": 8577550000
+        },
+        {
+          "rank": 5,
+          "winners": 2841016,
+          "amount": 5000,
+          "totalAmount": 14205080000
+        }
+      ]
+    },
+    "1193": {
+      "drwNo": 1193,
+      "drwNoDate": "2025-10-11",
+      "totalSales": 59338301500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 16,
+          "amount": 1717013508,
+          "totalAmount": 27472216128
+        },
+        {
+          "rank": 2,
+          "winners": 84,
+          "amount": 54508366,
+          "totalAmount": 4578702744
+        },
+        {
+          "rank": 3,
+          "winners": 3635,
+          "amount": 1259616,
+          "totalAmount": 4578704160
+        },
+        {
+          "rank": 4,
+          "winners": 175936,
+          "amount": 50000,
+          "totalAmount": 8796800000
+        },
+        {
+          "rank": 5,
+          "winners": 2782376,
+          "amount": 5000,
+          "totalAmount": 13911880000
+        }
+      ]
+    },
+    "1194": {
+      "drwNo": 1194,
+      "drwNoDate": "2025-10-18",
+      "totalSales": 60542853000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 28,
+          "amount": 985155349,
+          "totalAmount": 27584349772
+        },
+        {
+          "rank": 2,
+          "winners": 99,
+          "amount": 46438300,
+          "totalAmount": 4597391700
+        },
+        {
+          "rank": 3,
+          "winners": 5442,
+          "amount": 844799,
+          "totalAmount": 4597396158
+        },
+        {
+          "rank": 4,
+          "winners": 186820,
+          "amount": 50000,
+          "totalAmount": 9341000000
+        },
+        {
+          "rank": 5,
+          "winners": 2884544,
+          "amount": 5000,
+          "totalAmount": 14422720000
+        }
+      ]
+    },
+    "1195": {
+      "drwNo": 1195,
+      "drwNoDate": "2025-10-25",
+      "totalSales": 61459006500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 10,
+          "amount": 2939186738,
+          "totalAmount": 29391867380
+        },
+        {
+          "rank": 2,
+          "winners": 86,
+          "amount": 56960984,
+          "totalAmount": 4898644624
+        },
+        {
+          "rank": 3,
+          "winners": 3337,
+          "amount": 1467979,
+          "totalAmount": 4898645923
+        },
+        {
+          "rank": 4,
+          "winners": 165621,
+          "amount": 50000,
+          "totalAmount": 8281050000
+        },
+        {
+          "rank": 5,
+          "winners": 2797760,
+          "amount": 5000,
+          "totalAmount": 13988800000
+        }
+      ]
+    },
+    "1196": {
+      "drwNo": 1196,
+      "drwNoDate": "2025-11-01",
+      "totalSales": 60822716000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 15,
+          "amount": 2001627550,
+          "totalAmount": 30024413250
+        },
+        {
+          "rank": 2,
+          "winners": 94,
+          "amount": 53234776,
+          "totalAmount": 5004068944
+        },
+        {
+          "rank": 3,
+          "winners": 2837,
+          "amount": 1763860,
+          "totalAmount": 5004070820
+        },
+        {
+          "rank": 4,
+          "winners": 153894,
+          "amount": 50000,
+          "totalAmount": 7694700000
+        },
+        {
+          "rank": 5,
+          "winners": 2619093,
+          "amount": 5000,
+          "totalAmount": 13095465000
+        }
+      ]
+    },
+    "1197": {
+      "drwNo": 1197,
+      "drwNoDate": "2025-11-08",
+      "totalSales": 60122217000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 13,
+          "amount": 2205089827,
+          "totalAmount": 28666167751
+        },
+        {
+          "rank": 2,
+          "winners": 74,
+          "amount": 64563441,
+          "totalAmount": 4777694634
+        },
+        {
+          "rank": 3,
+          "winners": 3087,
+          "amount": 1547683,
+          "totalAmount": 4777697421
+        },
+        {
+          "rank": 4,
+          "winners": 162871,
+          "amount": 50000,
+          "totalAmount": 8143550000
+        },
+        {
+          "rank": 5,
+          "winners": 2751422,
+          "amount": 5000,
+          "totalAmount": 13757110000
+        }
+      ]
+    },
+    "1198": {
+      "drwNo": 1198,
+      "drwNoDate": "2025-11-15",
+      "totalSales": 60103758500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 10,
+          "amount": 2953686638,
+          "totalAmount": 29536866380
+        },
+        {
+          "rank": 2,
+          "winners": 78,
+          "amount": 63112963,
+          "totalAmount": 4922811114
+        },
+        {
+          "rank": 3,
+          "winners": 3110,
+          "amount": 1582898,
+          "totalAmount": 4922812780
+        },
+        {
+          "rank": 4,
+          "winners": 155228,
+          "amount": 50000,
+          "totalAmount": 7761400000
+        },
+        {
+          "rank": 5,
+          "winners": 2591974,
+          "amount": 5000,
+          "totalAmount": 12959870000
+        }
+      ]
+    },
+    "1199": {
+      "drwNo": 1199,
+      "drwNoDate": "2025-11-22",
+      "totalSales": 59312398000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 17,
+          "amount": 1695609839,
+          "totalAmount": 28825367263
+        },
+        {
+          "rank": 2,
+          "winners": 75,
+          "amount": 64056372,
+          "totalAmount": 4804227900
+        },
+        {
+          "rank": 3,
+          "winners": 3504,
+          "amount": 1371070,
+          "totalAmount": 4804229280
+        },
+        {
+          "rank": 4,
+          "winners": 157073,
+          "amount": 50000,
+          "totalAmount": 7853650000
+        },
+        {
+          "rank": 5,
+          "winners": 2604985,
+          "amount": 5000,
+          "totalAmount": 13024925000
+        }
+      ]
+    },
+    "1200": {
+      "drwNo": 1200,
+      "drwNoDate": "2025-11-29",
+      "totalSales": 59169798000,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 12,
+          "amount": 2357299875,
+          "totalAmount": 28287598500
+        },
+        {
+          "rank": 2,
+          "winners": 80,
+          "amount": 58932497,
+          "totalAmount": 4714599760
+        },
+        {
+          "rank": 3,
+          "winners": 3584,
+          "amount": 1315458,
+          "totalAmount": 4714601472
+        },
+        {
+          "rank": 4,
+          "winners": 161754,
+          "amount": 50000,
+          "totalAmount": 8087700000
+        },
+        {
+          "rank": 5,
+          "winners": 2673060,
+          "amount": 5000,
+          "totalAmount": 13365300000
+        }
+      ]
+    },
+    "1201": {
+      "drwNo": 1201,
+      "drwNoDate": "2025-12-06",
+      "totalSales": 57694796500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 19,
+          "amount": 1414555718,
+          "totalAmount": 26876558642
+        },
+        {
+          "rank": 2,
+          "winners": 84,
+          "amount": 53326506,
+          "totalAmount": 4479426504
+        },
+        {
+          "rank": 3,
+          "winners": 3321,
+          "amount": 1348819,
+          "totalAmount": 4479427899
+        },
+        {
+          "rank": 4,
+          "winners": 166050,
+          "amount": 50000,
+          "totalAmount": 8302500000
+        },
+        {
+          "rank": 5,
+          "winners": 2711377,
+          "amount": 5000,
+          "totalAmount": 13556885000
+        }
+      ]
+    },
+    "1202": {
+      "drwNo": 1202,
+      "drwNoDate": "2025-12-13",
+      "totalSales": 58477118500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 14,
+          "amount": 1920410813,
+          "totalAmount": 26885751382
+        },
+        {
+          "rank": 2,
+          "winners": 109,
+          "amount": 41109712,
+          "totalAmount": 4480958608
+        },
+        {
+          "rank": 3,
+          "winners": 3764,
+          "amount": 1190478,
+          "totalAmount": 4480959192
+        },
+        {
+          "rank": 4,
+          "winners": 180212,
+          "amount": 50000,
+          "totalAmount": 9010600000
+        },
+        {
+          "rank": 5,
+          "winners": 2723770,
+          "amount": 5000,
+          "totalAmount": 13618850000
+        }
+      ]
+    },
+    "1203": {
+      "drwNo": 1203,
+      "drwNoDate": "2025-12-20",
+      "totalSales": 60827815500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 21,
+          "amount": 1368060733,
+          "totalAmount": 28729275393
+        },
+        {
+          "rank": 2,
+          "winners": 118,
+          "amount": 40578073,
+          "totalAmount": 4788212614
+        },
+        {
+          "rank": 3,
+          "winners": 3588,
+          "amount": 1334508,
+          "totalAmount": 4788214704
+        },
+        {
+          "rank": 4,
+          "winners": 171960,
+          "amount": 50000,
+          "totalAmount": 8598000000
+        },
+        {
+          "rank": 5,
+          "winners": 2784823,
+          "amount": 5000,
+          "totalAmount": 13924115000
+        }
+      ]
+    },
+    "1204": {
+      "drwNo": 1204,
+      "drwNoDate": "2025-12-27",
+      "totalSales": 61879309500,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 18,
+          "amount": 1661007688,
+          "totalAmount": 29898138384
+        },
+        {
+          "rank": 2,
+          "winners": 95,
+          "amount": 52452875,
+          "totalAmount": 4983023125
+        },
+        {
+          "rank": 3,
+          "winners": 3361,
+          "amount": 1482602,
+          "totalAmount": 4983025322
+        },
+        {
+          "rank": 4,
+          "winners": 164919,
+          "amount": 50000,
+          "totalAmount": 8245950000
+        },
+        {
+          "rank": 5,
+          "winners": 2753835,
+          "amount": 5000,
+          "totalAmount": 13769175000
+        }
+      ]
+    },
+    "1205": {
+      "drwNo": 1205,
+      "drwNoDate": "2026-01-03",
+      "totalSales": 66335375027,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 10,
+          "amount": 3226386263,
+          "totalAmount": 32263862630
+        },
+        {
+          "rank": 2,
+          "winners": 97,
+          "amount": 55436191,
+          "totalAmount": 5377310527
+        },
+        {
+          "rank": 3,
+          "winners": 3486,
+          "amount": 1542545,
+          "totalAmount": 5377311870
+        },
+        {
+          "rank": 4,
+          "winners": 174740,
+          "amount": 50000,
+          "totalAmount": 8737000000
+        },
+        {
+          "rank": 5,
+          "winners": 2915978,
+          "amount": 5000,
+          "totalAmount": 14579890000
+        }
+      ]
+    },
+    "1206": {
+      "drwNo": 1206,
+      "drwNoDate": "2026-01-10",
+      "totalSales": 60506345998,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 15,
+          "amount": 1868807000,
+          "totalAmount": 28032105000
+        },
+        {
+          "rank": 2,
+          "winners": 74,
+          "amount": 63135372,
+          "totalAmount": 4672017528
+        },
+        {
+          "rank": 3,
+          "winners": 3329,
+          "amount": 1403430,
+          "totalAmount": 4672018470
+        },
+        {
+          "rank": 4,
+          "winners": 172867,
+          "amount": 50000,
+          "totalAmount": 8643350000
+        },
+        {
+          "rank": 5,
+          "winners": 2897371,
+          "amount": 5000,
+          "totalAmount": 14486855000
+        }
+      ]
+    },
+    "1207": {
+      "drwNo": 1207,
+      "drwNoDate": "2026-01-17",
+      "totalSales": 61467144896,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 17,
+          "amount": 1733202949,
+          "totalAmount": 29464450133
+        },
+        {
+          "rank": 2,
+          "winners": 86,
+          "amount": 57101648,
+          "totalAmount": 4910741728
+        },
+        {
+          "rank": 3,
+          "winners": 3365,
+          "amount": 1459359,
+          "totalAmount": 4910743035
+        },
+        {
+          "rank": 4,
+          "winners": 168020,
+          "amount": 50000,
+          "totalAmount": 8401000000
+        },
+        {
+          "rank": 5,
+          "winners": 2756042,
+          "amount": 5000,
+          "totalAmount": 13780210000
+        }
+      ]
+    },
+    "1208": {
+      "drwNo": 1208,
+      "drwNoDate": "2026-01-24",
+      "totalSales": 60204336826,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 6,
+          "amount": 5001713625,
+          "totalAmount": 30010281750
+        },
+        {
+          "rank": 2,
+          "winners": 68,
+          "amount": 73554613,
+          "totalAmount": 5001713684
+        },
+        {
+          "rank": 3,
+          "winners": 2932,
+          "amount": 1705906,
+          "totalAmount": 5001716392
+        },
+        {
+          "rank": 4,
+          "winners": 149359,
+          "amount": 50000,
+          "totalAmount": 7467950000
+        },
+        {
+          "rank": 5,
+          "winners": 2544535,
+          "amount": 5000,
+          "totalAmount": 12722675000
+        }
+      ]
+    },
+    "1209": {
+      "drwNo": 1209,
+      "drwNoDate": "2026-01-31",
+      "totalSales": 62020198406,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 22,
+          "amount": 1371910466,
+          "totalAmount": 30182030252
+        },
+        {
+          "rank": 2,
+          "winners": 73,
+          "amount": 68908745,
+          "totalAmount": 5030338385
+        },
+        {
+          "rank": 3,
+          "winners": 3141,
+          "amount": 1601509,
+          "totalAmount": 5030339769
+        },
+        {
+          "rank": 4,
+          "winners": 163147,
+          "amount": 50000,
+          "totalAmount": 8157350000
+        },
+        {
+          "rank": 5,
+          "winners": 2724028,
+          "amount": 5000,
+          "totalAmount": 13620140000
+        }
+      ]
+    },
+    "1210": {
+      "drwNo": 1210,
+      "drwNoDate": "2026-02-07",
+      "totalSales": 61555530677,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 24,
+          "amount": 1102298407,
+          "totalAmount": 26455161768
+        },
+        {
+          "rank": 2,
+          "winners": 153,
+          "amount": 28818259,
+          "totalAmount": 4409193627
+        },
+        {
+          "rank": 3,
+          "winners": 4649,
+          "amount": 948418,
+          "totalAmount": 4409195282
+        },
+        {
+          "rank": 4,
+          "winners": 211663,
+          "amount": 50000,
+          "totalAmount": 10583150000
+        },
+        {
+          "rank": 5,
+          "winners": 3139766,
+          "amount": 5000,
+          "totalAmount": 15698830000
+        }
+      ]
+    },
+    "1211": {
+      "drwNo": 1211,
+      "drwNoDate": "2026-02-14",
+      "totalSales": 67472903182,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 14,
+          "amount": 2370956036,
+          "totalAmount": 33193384504
+        },
+        {
+          "rank": 2,
+          "winners": 86,
+          "amount": 64328265,
+          "totalAmount": 5532230790
+        },
+        {
+          "rank": 3,
+          "winners": 3332,
+          "amount": 1660334,
+          "totalAmount": 5532232888
+        },
+        {
+          "rank": 4,
+          "winners": 174056,
+          "amount": 50000,
+          "totalAmount": 8702800000
+        },
+        {
+          "rank": 5,
+          "winners": 2902451,
+          "amount": 5000,
+          "totalAmount": 14512255000
+        }
+      ]
+    },
+    "1212": {
+      "drwNo": 1212,
+      "drwNoDate": "2026-02-21",
+      "totalSales": 65863966662,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 12,
+          "amount": 2654089032,
+          "totalAmount": 31849068384
+        },
+        {
+          "rank": 2,
+          "winners": 79,
+          "amount": 67192128,
+          "totalAmount": 5308178112
+        },
+        {
+          "rank": 3,
+          "winners": 3482,
+          "amount": 1524463,
+          "totalAmount": 5308180166
+        },
+        {
+          "rank": 4,
+          "winners": 175609,
+          "amount": 50000,
+          "totalAmount": 8780450000
+        },
+        {
+          "rank": 5,
+          "winners": 2923618,
+          "amount": 5000,
+          "totalAmount": 14618090000
+        }
+      ]
+    },
+    "1213": {
+      "drwNo": 1213,
+      "drwNoDate": "2026-02-28",
+      "totalSales": 65555539740,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 18,
+          "amount": 1740011646,
+          "totalAmount": 31320209628
+        },
+        {
+          "rank": 2,
+          "winners": 110,
+          "amount": 47454864,
+          "totalAmount": 5220035040
+        },
+        {
+          "rank": 3,
+          "winners": 3724,
+          "amount": 1401728,
+          "totalAmount": 5220035072
+        },
+        {
+          "rank": 4,
+          "winners": 180063,
+          "amount": 50000,
+          "totalAmount": 9003150000
+        },
+        {
+          "rank": 5,
+          "winners": 2958422,
+          "amount": 5000,
+          "totalAmount": 14792110000
+        }
+      ]
+    },
+    "1214": {
+      "drwNo": 1214,
+      "drwNoDate": "2026-03-07",
+      "totalSales": 62407932092,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 12,
+          "amount": 2431577188,
+          "totalAmount": 29178926256
+        },
+        {
+          "rank": 2,
+          "winners": 99,
+          "amount": 49122772,
+          "totalAmount": 4863154428
+        },
+        {
+          "rank": 3,
+          "winners": 3618,
+          "amount": 1344156,
+          "totalAmount": 4863156408
+        },
+        {
+          "rank": 4,
+          "winners": 177889,
+          "amount": 50000,
+          "totalAmount": 8894450000
+        },
+        {
+          "rank": 5,
+          "winners": 2921649,
+          "amount": 5000,
+          "totalAmount": 14608245000
+        }
+      ]
+    },
+    "1215": {
+      "drwNo": 1215,
+      "drwNoDate": "2026-03-14",
+      "totalSales": 63488551584,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 16,
+          "amount": 1998542133,
+          "totalAmount": 31976674128
+        },
+        {
+          "rank": 2,
+          "winners": 76,
+          "amount": 70124286,
+          "totalAmount": 5329445736
+        },
+        {
+          "rank": 3,
+          "winners": 3120,
+          "amount": 1708156,
+          "totalAmount": 5329446720
+        },
+        {
+          "rank": 4,
+          "winners": 153024,
+          "amount": 50000,
+          "totalAmount": 7651200000
+        },
+        {
+          "rank": 5,
+          "winners": 2640357,
+          "amount": 5000,
+          "totalAmount": 13201785000
+        }
+      ]
+    },
+    "1216": {
+      "drwNo": 1216,
+      "drwNoDate": "2026-03-21",
+      "totalSales": 62778263417,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 14,
+          "amount": 2148654000,
+          "totalAmount": 30081156000
+        },
+        {
+          "rank": 2,
+          "winners": 87,
+          "amount": 57626736,
+          "totalAmount": 5013526032
+        },
+        {
+          "rank": 3,
+          "winners": 3181,
+          "amount": 1576085,
+          "totalAmount": 5013526385
+        },
+        {
+          "rank": 4,
+          "winners": 168089,
+          "amount": 50000,
+          "totalAmount": 8404450000
+        },
+        {
+          "rank": 5,
+          "winners": 2853121,
+          "amount": 5000,
+          "totalAmount": 14265605000
+        }
+      ]
+    },
+    "1217": {
+      "drwNo": 1217,
+      "drwNoDate": "2026-03-28",
+      "totalSales": 62577629462,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 14,
+          "amount": 2179738018,
+          "totalAmount": 30516332252
+        },
+        {
+          "rank": 2,
+          "winners": 85,
+          "amount": 59835946,
+          "totalAmount": 5086055410
+        },
+        {
+          "rank": 3,
+          "winners": 3344,
+          "amount": 1520950,
+          "totalAmount": 5086056800
+        },
+        {
+          "rank": 4,
+          "winners": 163563,
+          "amount": 50000,
+          "totalAmount": 8178150000
+        },
+        {
+          "rank": 5,
+          "winners": 2742207,
+          "amount": 5000,
+          "totalAmount": 13711035000
+        }
+      ]
+    },
+    "1218": {
+      "drwNo": 1218,
+      "drwNoDate": "2026-04-04",
+      "totalSales": 61667966400,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 18,
+          "amount": 1714482042,
+          "totalAmount": 30860676756
+        },
+        {
+          "rank": 2,
+          "winners": 80,
+          "amount": 64293077,
+          "totalAmount": 5143446160
+        },
+        {
+          "rank": 3,
+          "winners": 2889,
+          "amount": 1780356,
+          "totalAmount": 5143448484
+        },
+        {
+          "rank": 4,
+          "winners": 150326,
+          "amount": 50000,
+          "totalAmount": 7516300000
+        },
+        {
+          "rank": 5,
+          "winners": 2600819,
+          "amount": 5000,
+          "totalAmount": 13004095000
+        }
+      ]
+    },
+    "1219": {
+      "drwNo": 1219,
+      "drwNoDate": "2026-04-11",
+      "totalSales": 60472901798,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 12,
+          "amount": 2508232844,
+          "totalAmount": 30098794128
+        },
+        {
+          "rank": 2,
+          "winners": 77,
+          "amount": 65148906,
+          "totalAmount": 5016465762
+        },
+        {
+          "rank": 3,
+          "winners": 3079,
+          "amount": 1629252,
+          "totalAmount": 5016466908
+        },
+        {
+          "rank": 4,
+          "winners": 150733,
+          "amount": 50000,
+          "totalAmount": 7536650000
+        },
+        {
+          "rank": 5,
+          "winners": 2560905,
+          "amount": 5000,
+          "totalAmount": 12804525000
+        }
+      ]
+    },
+    "1220": {
+      "drwNo": 1220,
+      "drwNoDate": "2026-04-18",
+      "totalSales": 60979412665,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 14,
+          "amount": 2114514161,
+          "totalAmount": 29603198254
+        },
+        {
+          "rank": 2,
+          "winners": 85,
+          "amount": 58045487,
+          "totalAmount": 4933866395
+        },
+        {
+          "rank": 3,
+          "winners": 3192,
+          "amount": 1545698,
+          "totalAmount": 4933868016
+        },
+        {
+          "rank": 4,
+          "winners": 161279,
+          "amount": 50000,
+          "totalAmount": 8063950000
+        },
+        {
+          "rank": 5,
+          "winners": 2688906,
+          "amount": 5000,
+          "totalAmount": 13444530000
+        }
+      ]
+    },
+    "1221": {
+      "drwNo": 1221,
+      "drwNoDate": "2026-04-25",
+      "totalSales": 61489811578,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 16,
+          "amount": 1830801165,
+          "totalAmount": 29292818640
+        },
+        {
+          "rank": 2,
+          "winners": 96,
+          "amount": 50855588,
+          "totalAmount": 4882136448
+        },
+        {
+          "rank": 3,
+          "winners": 3465,
+          "amount": 1408986,
+          "totalAmount": 4882136490
+        },
+        {
+          "rank": 4,
+          "winners": 174082,
+          "amount": 50000,
+          "totalAmount": 8704100000
+        },
+        {
+          "rank": 5,
+          "winners": 2745724,
+          "amount": 5000,
+          "totalAmount": 13728620000
+        }
+      ]
+    },
+    "1222": {
+      "drwNo": 1222,
+      "drwNoDate": "2026-05-02",
+      "totalSales": 62121779581,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 24,
+          "amount": 1202986844,
+          "totalAmount": 28871684256
+        },
+        {
+          "rank": 2,
+          "winners": 115,
+          "amount": 41843021,
+          "totalAmount": 4811947415
+        },
+        {
+          "rank": 3,
+          "winners": 4081,
+          "amount": 1179110,
+          "totalAmount": 4811947910
+        },
+        {
+          "rank": 4,
+          "winners": 182844,
+          "amount": 50000,
+          "totalAmount": 9142200000
+        },
+        {
+          "rank": 5,
+          "winners": 2896800,
+          "amount": 5000,
+          "totalAmount": 14484000000
+        }
+      ]
+    },
+    "1223": {
+      "drwNo": 1223,
+      "drwNoDate": "2026-05-09",
+      "totalSales": 61310584284,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 16,
+          "amount": 1857554133,
+          "totalAmount": 29720866128
+        },
+        {
+          "rank": 2,
+          "winners": 103,
+          "amount": 48092017,
+          "totalAmount": 4953477751
+        },
+        {
+          "rank": 3,
+          "winners": 3481,
+          "amount": 1423005,
+          "totalAmount": 4953480405
+        },
+        {
+          "rank": 4,
+          "winners": 161967,
+          "amount": 50000,
+          "totalAmount": 8098350000
+        },
+        {
+          "rank": 5,
+          "winners": 2716882,
+          "amount": 5000,
+          "totalAmount": 13584410000
+        }
+      ]
+    },
+    "1224": {
+      "drwNo": 1224,
+      "drwNoDate": "2026-05-16",
+      "totalSales": 60555204552,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 12,
+          "amount": 2414855250,
+          "totalAmount": 28978263000
+        },
+        {
+          "rank": 2,
+          "winners": 70,
+          "amount": 68995865,
+          "totalAmount": 4829710550
+        },
+        {
+          "rank": 3,
+          "winners": 3373,
+          "amount": 1431874,
+          "totalAmount": 4829711002
+        },
+        {
+          "rank": 4,
+          "winners": 166726,
+          "amount": 50000,
+          "totalAmount": 8336300000
+        },
+        {
+          "rank": 5,
+          "winners": 2716244,
+          "amount": 5000,
+          "totalAmount": 13581220000
+        }
+      ]
+    },
+    "1225": {
+      "drwNo": 1225,
+      "drwNoDate": "2026-05-23",
+      "totalSales": 60201445675,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 13,
+          "amount": 2228133087,
+          "totalAmount": 28965730131
+        },
+        {
+          "rank": 2,
+          "winners": 76,
+          "amount": 63521338,
+          "totalAmount": 4827621688
+        },
+        {
+          "rank": 3,
+          "winners": 3333,
+          "amount": 1448432,
+          "totalAmount": 4827623856
+        },
+        {
+          "rank": 4,
+          "winners": 161090,
+          "amount": 50000,
+          "totalAmount": 8054500000
+        },
+        {
+          "rank": 5,
+          "winners": 2705194,
+          "amount": 5000,
+          "totalAmount": 13525970000
+        }
+      ]
+    },
+    "1226": {
+      "drwNo": 1226,
+      "drwNoDate": "2026-05-30",
+      "totalSales": 60129974308,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 10,
+          "amount": 2815230113,
+          "totalAmount": 28152301130
+        },
+        {
+          "rank": 2,
+          "winners": 75,
+          "amount": 62560670,
+          "totalAmount": 4692050250
+        },
+        {
+          "rank": 3,
+          "winners": 3557,
+          "amount": 1319104,
+          "totalAmount": 4692052928
+        },
+        {
+          "rank": 4,
+          "winners": 171525,
+          "amount": 50000,
+          "totalAmount": 8576250000
+        },
+        {
+          "rank": 5,
+          "winners": 2803464,
+          "amount": 5000,
+          "totalAmount": 14017320000
+        }
+      ]
+    },
+    "1227": {
+      "drwNo": 1227,
+      "drwNoDate": "2026-06-06",
+      "totalSales": 59441280119,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 11,
+          "amount": 2674808455,
+          "totalAmount": 29422893005
+        },
+        {
+          "rank": 2,
+          "winners": 70,
+          "amount": 70054508,
+          "totalAmount": 4903815560
+        },
+        {
+          "rank": 3,
+          "winners": 3042,
+          "amount": 1612037,
+          "totalAmount": 4903816554
+        },
+        {
+          "rank": 4,
+          "winners": 151881,
+          "amount": 50000,
+          "totalAmount": 7594050000
+        },
+        {
+          "rank": 5,
+          "winners": 2523341,
+          "amount": 5000,
+          "totalAmount": 12616705000
+        }
+      ]
+    },
+    "1228": {
+      "drwNo": 1228,
+      "drwNoDate": "2026-06-13",
+      "totalSales": 59526138366,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 11,
+          "amount": 2698334421,
+          "totalAmount": 29681678631
+        },
+        {
+          "rank": 2,
+          "winners": 83,
+          "amount": 59601765,
+          "totalAmount": 4946946495
+        },
+        {
+          "rank": 3,
+          "winners": 2836,
+          "amount": 1744340,
+          "totalAmount": 4946948240
+        },
+        {
+          "rank": 4,
+          "winners": 147604,
+          "amount": 50000,
+          "totalAmount": 7380200000
+        },
+        {
+          "rank": 5,
+          "winners": 2514073,
+          "amount": 5000,
+          "totalAmount": 12570365000
+        }
+      ]
+    },
+    "1229": {
+      "drwNo": 1229,
+      "drwNoDate": "2026-06-20",
+      "totalSales": 58077767333,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 8,
+          "amount": 3519759000,
+          "totalAmount": 28158072000
+        },
+        {
+          "rank": 2,
+          "winners": 89,
+          "amount": 52730472,
+          "totalAmount": 4693012008
+        },
+        {
+          "rank": 3,
+          "winners": 2925,
+          "amount": 1604449,
+          "totalAmount": 4693013325
+        },
+        {
+          "rank": 4,
+          "winners": 152290,
+          "amount": 50000,
+          "totalAmount": 7614500000
+        },
+        {
+          "rank": 5,
+          "winners": 2583834,
+          "amount": 5000,
+          "totalAmount": 12919170000
+        }
+      ]
+    },
+    "1230": {
+      "drwNo": 1230,
+      "drwNoDate": "2026-06-27",
+      "totalSales": 60088838564,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 16,
+          "amount": 1771357196,
+          "totalAmount": 28341715136
+        },
+        {
+          "rank": 2,
+          "winners": 90,
+          "amount": 52484658,
+          "totalAmount": 4723619220
+        },
+        {
+          "rank": 3,
+          "winners": 3336,
+          "amount": 1415953,
+          "totalAmount": 4723619208
+        },
+        {
+          "rank": 4,
+          "winners": 168902,
+          "amount": 50000,
+          "totalAmount": 8445100000
+        },
+        {
+          "rank": 5,
+          "winners": 2770957,
+          "amount": 5000,
+          "totalAmount": 13854785000
+        }
+      ]
+    },
+    "1231": {
+      "drwNo": 1231,
+      "drwNoDate": "2026-07-04",
+      "totalSales": 59042291693,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 17,
+          "amount": 1652990074,
+          "totalAmount": 28100831258
+        },
+        {
+          "rank": 2,
+          "winners": 92,
+          "amount": 50907303,
+          "totalAmount": 4683471876
+        },
+        {
+          "rank": 3,
+          "winners": 3329,
+          "amount": 1406871,
+          "totalAmount": 4683473559
+        },
+        {
+          "rank": 4,
+          "winners": 162821,
+          "amount": 50000,
+          "totalAmount": 8141050000
+        },
+        {
+          "rank": 5,
+          "winners": 2686693,
+          "amount": 5000,
+          "totalAmount": 13433465000
+        }
+      ]
+    },
+    "1232": {
+      "drwNo": 1232,
+      "drwNoDate": "2026-07-11",
+      "totalSales": 57318153053,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 11,
+          "amount": 2533260819,
+          "totalAmount": 27865869009
+        },
+        {
+          "rank": 2,
+          "winners": 92,
+          "amount": 50481647,
+          "totalAmount": 4644311524
+        },
+        {
+          "rank": 3,
+          "winners": 2984,
+          "amount": 1556405,
+          "totalAmount": 4644312520
+        },
+        {
+          "rank": 4,
+          "winners": 149349,
+          "amount": 50000,
+          "totalAmount": 7467450000
+        },
+        {
+          "rank": 5,
+          "winners": 2539242,
+          "amount": 5000,
+          "totalAmount": 12696210000
+        }
+      ]
+    },
+    "1233": {
+      "drwNo": 1233,
+      "drwNoDate": "2026-07-18",
+      "totalSales": 58079891072,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 31,
+          "amount": 837965396,
+          "totalAmount": 25976927276
+        },
+        {
+          "rank": 2,
+          "winners": 76,
+          "amount": 56966946,
+          "totalAmount": 4329487896
+        },
+        {
+          "rank": 3,
+          "winners": 4438,
+          "amount": 975550,
+          "totalAmount": 4329490900
+        },
+        {
+          "rank": 4,
+          "winners": 185487,
+          "amount": 50000,
+          "totalAmount": 9274350000
+        },
+        {
+          "rank": 5,
+          "winners": 2833927,
+          "amount": 5000,
+          "totalAmount": 14169635000
+        }
+      ]
+    },
+    "1234": {
+      "drwNo": 1234,
+      "drwNoDate": "2026-07-25",
+      "totalSales": 57995216655,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 18,
+          "amount": 1595129563,
+          "totalAmount": 28712332134
+        },
+        {
+          "rank": 2,
+          "winners": 71,
+          "amount": 67399841,
+          "totalAmount": 4785388711
+        },
+        {
+          "rank": 3,
+          "winners": 2985,
+          "amount": 1603146,
+          "totalAmount": 4785390810
+        },
+        {
+          "rank": 4,
+          "winners": 146684,
+          "amount": 50000,
+          "totalAmount": 7334200000
+        },
+        {
+          "rank": 5,
+          "winners": 2475581,
+          "amount": 5000,
+          "totalAmount": 12377905000
+        }
+      ]
+    },
+    "1235": {
+      "drwNo": 1235,
+      "drwNoDate": "2026-08-01",
+      "totalSales": 57722535226,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 9,
+          "amount": 3090961625,
+          "totalAmount": 27818654625
+        },
+        {
+          "rank": 2,
+          "winners": 82,
+          "amount": 56541981,
+          "totalAmount": 4636442442
+        },
+        {
+          "rank": 3,
+          "winners": 2859,
+          "amount": 1621701,
+          "totalAmount": 4636443159
+        },
+        {
+          "rank": 4,
+          "winners": 154048,
+          "amount": 50000,
+          "totalAmount": 7702400000
+        },
+        {
+          "rank": 5,
+          "winners": 2585719,
+          "amount": 5000,
+          "totalAmount": 12928595000
+        }
+      ]
+    }
+  }
+}

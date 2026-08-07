@@ -12,6 +12,7 @@ import {
   unregisterPushTokens,
   subscribeForegroundMessages,
 } from "@/lib/messaging";
+import { AUTH_UI_VISIBLE } from "@/config/authUi";
 
 const MIN_RANK_OPTIONS: Array<{ value: NotificationSettings["minRank"]; label: string }> = [
   { value: 5, label: "5등 이상 (3개 일치)" },
@@ -111,6 +112,8 @@ export default function WinNotificationSettings({ onToast }: WinNotificationSett
   );
 
   if (!isSignedIn) {
+    if (!AUTH_UI_VISIBLE) return null;
+
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4 mb-4">
         <div className="flex items-start gap-3">

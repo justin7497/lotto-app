@@ -8,6 +8,12 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "@/lib/firebase";
+import { ensureAuthTokenReady, getAuthUserId } from "@/utils/authReady";
+import {
+  loadPrintDoneKeys,
+  printDoneKey,
+  savePrintDoneKeys,
+} from "@/utils/printDone";
 import type { SlipPickMode } from "@/utils/mobileSlip";
 import { getRoundTag } from "@/utils/savedNumbers";
 
@@ -40,11 +46,15 @@ export interface FavoritePick {
   mode?: SlipPickMode;
   /** 저장 당시 대상 회차 */
   roundTag?: string;
+  /** 판매점 출력 완료 */
+  printDone?: boolean;
 }
 
 export const FAVORITE_LEGACY_ROUND_TAG = LEGACY_ROUND_TAG;
 
 function getCurrentUserId(): string | null {
+  const direct = getAuthUserId();
+  if (direct) return direct;
   if (!userIdGetter) return null;
   try {
     return userIdGetter();
@@ -86,6 +96,7 @@ function normalizePick(row: FavoritePick): FavoritePick | null {
     mode,
     savedAt: row.savedAt || new Date().toISOString(),
     roundTag: row.roundTag,
+    printDone: row.printDone ? true : undefined,
   };
   return isValidPick(pick) ? pick : null;
 }
@@ -161,18 +172,30 @@ async function loadFromFirestore(uid: string): Promise<FavoritePick[]> {
 async function saveToFirestore(uid: string, pick: FavoritePick): Promise<boolean> {
   if (!db) return false;
   try {
-    await setDoc(doc(favoritePicksCollection(uid), pick.id), {
+    const docData: Record<string, unknown> = {
       id: pick.id,
       name: pick.name,
       numbers: pick.numbers,
       mode: pick.mode ?? inferMode(pick.numbers),
       savedAt: pick.savedAt,
       roundTag: pick.roundTag ?? null,
-    });
+    };
+    if (pick.printDone) docData.printDone = true;
+    await setDoc(doc(favoritePicksCollection(uid), pick.id), docData);
     return true;
   } catch {
     return false;
   }
+}
+
+function applyPrintDoneFromPicks(picks: FavoritePick[]): void {
+  const keys = loadPrintDoneKeys();
+  const merged = new Set(keys);
+  for (const pick of picks) {
+    if (pick.printDone) merged.add(printDoneKey(pick.id));
+  }
+  if (merged.size === keys.size && [...merged].every((k) => keys.has(k))) return;
+  savePrintDoneKeys(merged);
 }
 
 async function deleteFromFirestore(uid: string, id: string): Promise<boolean> {
@@ -204,9 +227,15 @@ export async function loadFavoritePicks(): Promise<FavoritePick[]> {
     return mergeFavoritePicks(local);
   }
 
+  if (!(await ensureAuthTokenReady())) {
+    return mergeFavoritePicks(local);
+  }
+
   await syncLocalToFirestore(uid);
   const remote = await loadFromFirestore(uid);
-  return mergeFavoritePicks(remote, readLocal());
+  const merged = mergeFavoritePicks(remote, readLocal());
+  applyPrintDoneFromPicks(merged);
+  return merged;
 }
 
 export async function saveFavoritePick(
@@ -327,4 +356,28 @@ export function favoritePickToSlipGame(pick: FavoritePick) {
     numbers: [...pick.numbers],
     mode: pick.mode ?? inferMode(pick.numbers, pick.mode),
   };
+}
+
+export async function setFavoritePickPrintDone(pickId: string, done: boolean): Promise<void> {
+  const uid = getCurrentUserId();
+  const local = readLocal();
+  const idx = local.findIndex((p) => p.id === pickId);
+  if (idx >= 0) {
+    const updated = { ...local[idx], printDone: done || undefined };
+    const next = [...local];
+    next[idx] = updated;
+    writeLocal(next);
+  }
+
+  if (uid && isFirebaseConfigured && db) {
+    try {
+      await setDoc(
+        doc(favoritePicksCollection(uid), pickId),
+        { printDone: done },
+        { merge: true },
+      );
+    } catch {
+      /* ignore */
+    }
+  }
 }

@@ -4,7 +4,7 @@ importScripts("https://www.gstatic.com/firebasejs/11.10.0/firebase-messaging-com
 
 firebase.initializeApp({
   apiKey: "AIzaSyA2kU0D3_kANAwtz5hrm-QnwfXQO7gdwxw",
-  authDomain: "lotto-app-ljh.firebaseapp.com",
+  authDomain: "lotto-app-ljh.web.app",
   projectId: "lotto-app-ljh",
   storageBucket: "lotto-app-ljh.firebasestorage.app",
   messagingSenderId: "618940715584",
@@ -14,20 +14,22 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title ?? "로또 당첨 알림";
-  const body = payload.notification?.body ?? "추출번호 페이지에서 확인해 보세요.";
-  const link = payload.fcmOptions?.link ?? payload.data?.link ?? "/my-numbers";
+  const title = payload.notification?.title ?? "소원로또";
+  const body = payload.notification?.body ?? "새 알림이 도착했습니다.";
+  const link = payload.data?.link ?? payload.fcmOptions?.link ?? "/";
+  const targetLink = link.startsWith("http") ? link : `${self.location.origin}${link.startsWith("/") ? link : `/${link}`}`;
 
   self.registration.showNotification(title, {
     body,
     icon: "/icon-192.png",
     badge: "/favicon-32x32.png",
-    data: { link },
+    data: { link: targetLink },
   });
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const link = event.notification.data?.link ?? "/my-numbers";
-  event.waitUntil(clients.openWindow(link));
+  const link = event.notification.data?.link ?? "/";
+  const target = link.startsWith("http") ? link : `${self.location.origin}${link.startsWith("/") ? link : `/${link}`}`;
+  event.waitUntil(clients.openWindow(target));
 });
