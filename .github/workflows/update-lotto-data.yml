@@ -135,6 +135,9 @@ jobs:
         run: npm ci --prefix functions
 
       - name: Typecheck lotto app
+        if: >-
+          steps.changes.outputs.changed == 'true' ||
+          github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: corepack pnpm --filter @workspace/lotto-app run typecheck

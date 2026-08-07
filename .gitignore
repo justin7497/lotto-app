@@ -28,6 +28,7 @@ node_modules
 !.vscode/extensions.json
 
 # misc
+.secrets/
 /.sass-cache
 /connect.lock
 /coverage
@@ -56,3 +57,8 @@ Thumbs.db
 # build outputs
 artifacts/lotto-app/dist/
 .firebase/
+
+# Android TWA signing (do not commit)
+artifacts/lotto-app/android-twa/release.keystore
+artifacts/lotto-app/android-twa/signing.env
+artifacts/lotto-app/android-twa/local.properties
