@@ -158,6 +158,7 @@ jobs:
           PORT: "5173"
           BASE_PATH: "/"
           LATEST_DRW_NO: ${{ steps.update.outputs.latest_drw_no }}
+          APP_VERSION_PROMPT: "0"
         run: |
           if [ -z "$FIREBASE_TOKEN" ]; then
             echo "::error::FIREBASE_TOKEN secret is not set. Run 'firebase login:ci' locally and add the token."

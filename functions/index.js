@@ -1,8 +1,67 @@
 const { onRequest } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { defineSecret, defineString } = require("firebase-functions/params");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
+const { Resend } = require("resend");
+const { verifyAdminRequest } = require("./lib/adminAuth.mjs");
+const {
+  getAdminStats,
+  getWishPhrases,
+  saveWishPhrases,
+  resetWishPhrases,
+  getEngagementCampaigns,
+  saveEngagementCampaigns,
+  resetEngagementCampaigns,
+  getPushTargets,
+  sendTestPush,
+  syncDeviceToAccount,
+} = require("./lib/adminHandlers.mjs");
+const {
+  buildDirectPasswordResetUrl,
+  buildPasswordResetEmailHtml,
+} = require("./lib/passwordResetEmail.mjs");
 
 const sazuApiKeySecret = defineSecret("SAZU_API_KEY");
 const slipOmrUrlSecret = defineSecret("SLIP_OMR_URL");
+const resendApiKeyParam = defineString("RESEND_API_KEY", { default: "" });
+const resendFromEmailParam = defineString("RESEND_FROM_EMAIL", { default: "onboarding@resend.dev" });
+const adminEmailsParam = defineString("ADMIN_EMAILS", { default: "" });
+
+const PASSWORD_RESET_CONTINUE_URL = "https://lotto-app-ljh.web.app/reset-password";
+
+function getAdminAuth() {
+  if (getApps().length === 0) {
+    initializeApp();
+  }
+  return getAuth();
+}
+
+function getAdminDb() {
+  if (getApps().length === 0) {
+    initializeApp();
+  }
+  return getFirestore();
+}
+
+function getAdminMessaging() {
+  if (getApps().length === 0) {
+    initializeApp();
+  }
+  return getMessaging();
+}
+
+function parseAdminSubPath(pathOnly) {
+  const match = pathOnly.match(/\/api\/admin\/?(.*)$/);
+  return match ? match[1].replace(/\/$/, "") : "";
+}
+
+function parseAdminPath(req) {
+  const pathOnly = String(req.path || req.url || "").split("?")[0];
+  return parseAdminSubPath(pathOnly);
+}
 
 let lottoDetailModule;
 async function getLottoDetailModule() {
@@ -111,8 +170,8 @@ async function findLatestRound() {
 
 function setCors(res) {
   res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type");
+  res.set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.set("Cache-Control", "public, max-age=60");
 }
 
@@ -370,5 +429,241 @@ exports.lottoApi = onRequest(
         message: error instanceof Error ? error.message : String(error),
       });
     }
+  },
+);
+
+/** Hosting `/api/auth/password-reset` → 앱 직접 링크로 비밀번호 재설정 메일 발송 */
+exports.passwordResetEmail = onRequest(
+  {
+    region: "asia-northeast3",
+    cors: true,
+    timeoutSeconds: 20,
+    memory: "256MiB",
+  },
+  async (req, res) => {
+    setCors(res);
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      res.status(405).json({ ok: false, message: "Method not allowed" });
+      return;
+    }
+
+    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      res.status(400).json({ ok: false, message: "올바른 이메일을 입력해 주세요." });
+      return;
+    }
+
+    const resendApiKey = resendApiKeyParam.value()?.trim();
+    const resendFromEmail = resendFromEmailParam.value()?.trim() || "onboarding@resend.dev";
+
+    try {
+      const firebaseLink = await getAdminAuth().generatePasswordResetLink(email, {
+        url: PASSWORD_RESET_CONTINUE_URL,
+      });
+      const resetUrl = buildDirectPasswordResetUrl(firebaseLink);
+      let emailed = false;
+
+      if (resendApiKey) {
+        const resend = new Resend(resendApiKey);
+        const { error } = await resend.emails.send({
+          from: resendFromEmail,
+          to: email,
+          subject: "로또킹 비밀번호 재설정 안내",
+          html: buildPasswordResetEmailHtml(resetUrl),
+        });
+        if (error) {
+          console.error("passwordResetEmail resend error", error);
+        } else {
+          emailed = true;
+        }
+      }
+
+      res.json({ ok: true, resetUrl, emailed });
+    } catch (error) {
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String(error.code)
+          : "";
+      if (code === "auth/user-not-found") {
+        res.json({ ok: true });
+        return;
+      }
+      console.error("passwordResetEmail error", error);
+      res.status(500).json({ ok: false, message: "비밀번호 재설정 요청에 실패했습니다." });
+    }
+  },
+);
+
+/** Hosting `/api/admin/**` → 관리자 API */
+exports.adminApi = onRequest(
+  {
+    region: "asia-northeast3",
+    cors: true,
+    timeoutSeconds: 60,
+    memory: "512MiB",
+  },
+  async (req, res) => {
+    setCors(res);
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+
+    const auth = getAdminAuth();
+    const adminCheck = await verifyAdminRequest(req, auth, adminEmailsParam.value());
+    if (!adminCheck.ok) {
+      res.status(adminCheck.status).json({ ok: false, message: adminCheck.message });
+      return;
+    }
+
+    const subPath = parseAdminPath(req);
+    const db = getAdminDb();
+
+    try {
+      if (req.method === "GET" && (subPath === "stats" || subPath === "")) {
+        const stats = await getAdminStats(db, auth);
+        res.json(stats);
+        return;
+      }
+
+      if (req.method === "GET" && subPath === "wish-phrases") {
+        const data = await getWishPhrases(db);
+        res.json(data);
+        return;
+      }
+
+      if (req.method === "PUT" && subPath === "wish-phrases") {
+        const result = await saveWishPhrases(db, req.body?.categories, adminCheck.email);
+        if (!result.ok) {
+          res.status(result.status).json({ ok: false, message: result.message });
+          return;
+        }
+        res.json({ ok: true });
+        return;
+      }
+
+      if (req.method === "POST" && subPath === "wish-phrases/reset") {
+        await resetWishPhrases(db);
+        res.json({ ok: true });
+        return;
+      }
+
+      if (req.method === "GET" && subPath === "engagement-campaigns") {
+        const data = await getEngagementCampaigns(db);
+        res.json(data);
+        return;
+      }
+
+      if (req.method === "PUT" && subPath === "engagement-campaigns") {
+        const result = await saveEngagementCampaigns(
+          db,
+          req.body?.campaigns,
+          req.body?.settings,
+          adminCheck.email,
+        );
+        if (!result.ok) {
+          res.status(result.status).json({ ok: false, message: result.message });
+          return;
+        }
+        res.json({ ok: true });
+        return;
+      }
+
+      if (req.method === "POST" && subPath === "engagement-campaigns/reset") {
+        await resetEngagementCampaigns(db);
+        res.json({ ok: true });
+        return;
+      }
+
+      if (req.method === "GET" && subPath === "push/targets") {
+        const currentDeviceId = String(req.query.currentDeviceId ?? "").trim();
+        const data = await getPushTargets(db, adminCheck.uid, currentDeviceId);
+        res.json(data);
+        return;
+      }
+
+      if (req.method === "POST" && subPath === "push/sync-device") {
+        const deviceId = String(req.body?.deviceId ?? "").trim();
+        const result = await syncDeviceToAccount(db, adminCheck.uid, deviceId);
+        if (!result.ok && result.status) {
+          res.status(result.status).json({ ok: false, message: result.message });
+          return;
+        }
+        res.json(result);
+        return;
+      }
+
+      if (req.method === "POST" && subPath === "push/test") {
+        const messaging = getAdminMessaging();
+        const result = await sendTestPush(db, messaging, adminCheck, req.body ?? {});
+        if (!result.ok && result.status) {
+          res.status(result.status).json({ ok: false, message: result.message });
+          return;
+        }
+        res.json(result);
+        return;
+      }
+
+      res.status(404).json({ ok: false, message: "Not found" });
+    } catch (error) {
+      console.error("adminApi error", error);
+      res.status(500).json({
+        ok: false,
+        message: error instanceof Error ? error.message : "관리자 API 오류",
+      });
+    }
+  },
+);
+
+async function refreshLottoSyncCache() {
+  const { buildLottoSyncPayload } = await import("./lib/lottoSyncCache.mjs");
+  const payload = await buildLottoSyncPayload(fetchRound, findLatestRound);
+  await getAdminDb().doc("appConfig/lottoSync").set(payload, { merge: true });
+  console.log(`lottoSync cached: ${payload.latestDrwNo}회 (${payload.rounds.length} rounds)`);
+  return payload;
+}
+
+function isSaturdayDrawWindow() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(new Date());
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  if (weekday !== "Sat") return false;
+  if (hour < 20 || hour > 23) return false;
+  if (hour === 20 && minute < 45) return false;
+  return true;
+}
+
+async function scheduledLottoSyncHandler() {
+  if (!isSaturdayDrawWindow()) {
+    console.log("scheduledLottoSync: outside Saturday draw window, skip");
+    return;
+  }
+  await refreshLottoSyncCache();
+}
+
+/** 토요일 추첨 후 Firestore appConfig/lottoSync 갱신 (GitHub Actions 백업) */
+for (const schedule of ["55 20 * * 6", "10,25,40 21 * * 6", "5,20,35,50 22 * * 6"]) {
+  const suffix = schedule.replace(/[^0-9]/g, "").slice(0, 8);
+  exports[`scheduledLottoSync${suffix}`] = onSchedule(
+    { schedule, timeZone: "Asia/Seoul", region: "asia-northeast3" },
+    scheduledLottoSyncHandler,
+  );
+}
+
+exports.scheduledLottoSyncSun0900 = onSchedule(
+  { schedule: "0 9 * * 0", timeZone: "Asia/Seoul", region: "asia-northeast3" },
+  async () => {
+    await refreshLottoSyncCache();
   },
 );

@@ -16,6 +16,7 @@ import {
   loadCachedRounds,
   saveCachedRounds,
 } from "@/utils/lottoApi";
+import { fetchLottoSyncFromFirestore } from "@/utils/lottoSyncFirestore";
 
 const BASE_ROUNDS = baseData as LottoRound[];
 const BASE_MAX = Math.max(...BASE_ROUNDS.map((r) => r.drwNo));
@@ -54,10 +55,19 @@ export function LottoDataProvider({ children }: { children: ReactNode }) {
     const cachedMax = getCachedLatestDrwNo();
     const startFrom = Math.max(BASE_MAX + 1, cachedMax + 1);
 
-    const newRounds = await fetchMissingRounds(startFrom, startFrom + 200);
-    const merged = newRounds.length > 0 ? mergeCachedRounds(cached, newRounds) : cached;
+    const firestoreSync = await fetchLottoSyncFromFirestore();
+    const firestoreRounds =
+      firestoreSync && firestoreSync.latestDrwNo > BASE_MAX
+        ? firestoreSync.rounds.filter((r) => r.drwNo > BASE_MAX)
+        : [];
 
-    if (newRounds.length > 0) {
+    const newRounds = await fetchMissingRounds(startFrom, startFrom + 200);
+    const incoming = [...firestoreRounds, ...newRounds].filter(
+      (r, i, arr) => arr.findIndex((x) => x.drwNo === r.drwNo) === i,
+    );
+    const merged = mergeCachedRounds(cached, incoming);
+
+    if (incoming.length > 0) {
       setExtraRounds(merged);
       saveCachedRounds(merged);
     }
@@ -73,8 +83,8 @@ export function LottoDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (newRounds.length > 0) {
-      const latestNo = Math.max(...newRounds.map((r) => r.drwNo));
+    if (incoming.length > 0) {
+      const latestNo = Math.max(...incoming.map((r) => r.drwNo));
       setUpdateFailed(false);
       setUpdateMsg(`${latestNo}회차까지 업데이트됨`);
       return;

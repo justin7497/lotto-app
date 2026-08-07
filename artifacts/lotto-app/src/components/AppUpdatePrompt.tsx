@@ -1,23 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Sparkles } from "lucide-react";
+import { useLocation } from "wouter";
 import { useOverlayBack } from "@/hooks/useOverlayBack";
 import {
   applyAppUpdate,
   checkAppUpdateAvailable,
+  dismissUpdatePrompt,
+  isSlipRoute,
+  isUpdatePromptDismissed,
+  shouldPromptForUpdate,
   type RemoteAppVersion,
 } from "@/utils/appVersion";
 
 export default function AppUpdatePrompt() {
+  const [location] = useLocation();
+  const pathname = location.split("?")[0];
   const [update, setUpdate] = useState<RemoteAppVersion | null>(null);
-  const dismiss = useOverlayBack(Boolean(update), () => setUpdate(null));
+  const pendingSilentRef = useRef<RemoteAppVersion | null>(null);
+  const dismiss = useOverlayBack(Boolean(update), () => {
+    if (update) dismissUpdatePrompt(update.buildId);
+    setUpdate(null);
+  });
 
   useEffect(() => {
     let cancelled = false;
 
     async function runCheck() {
       const remote = await checkAppUpdateAvailable();
-      if (!cancelled && remote) setUpdate(remote);
+      if (cancelled || !remote) return;
+
+      if (!shouldPromptForUpdate(remote)) {
+        if (isSlipRoute(pathname)) {
+          pendingSilentRef.current = remote;
+          return;
+        }
+        applyAppUpdate();
+        return;
+      }
+
+      if (isUpdatePromptDismissed(remote.buildId)) return;
+      setUpdate(remote);
     }
 
     void runCheck();
@@ -31,7 +54,14 @@ export default function AppUpdatePrompt() {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [pathname]);
+
+  useEffect(() => {
+    const pending = pendingSilentRef.current;
+    if (!pending || isSlipRoute(pathname)) return;
+    pendingSilentRef.current = null;
+    applyAppUpdate();
+  }, [pathname]);
 
   if (!update) return null;
 

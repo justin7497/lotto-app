@@ -1,13 +1,40 @@
 const VERSION_URL = `${import.meta.env.BASE_URL}app-version.json`;
+const DISMISS_PREFIX = "app-update-dismiss:";
 
 export interface RemoteAppVersion {
   buildId: string;
   builtAt?: string;
   label?: string;
+  /** false면 팝업 없이 조용히 새로고침 (기본 true) */
+  prompt?: boolean;
 }
 
 export function getLocalBuildId(): string {
   return (import.meta.env.VITE_APP_BUILD_ID as string | undefined) || "dev";
+}
+
+export function shouldPromptForUpdate(remote: RemoteAppVersion): boolean {
+  return remote.prompt !== false;
+}
+
+export function isUpdatePromptDismissed(buildId: string): boolean {
+  try {
+    return sessionStorage.getItem(`${DISMISS_PREFIX}${buildId}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function dismissUpdatePrompt(buildId: string): void {
+  try {
+    sessionStorage.setItem(`${DISMISS_PREFIX}${buildId}`, "1");
+  } catch {
+    // ignore
+  }
+}
+
+export function isSlipRoute(pathname: string): boolean {
+  return pathname === "/slip" || pathname.startsWith("/slip/");
 }
 
 export async function fetchRemoteAppVersion(): Promise<RemoteAppVersion | null> {

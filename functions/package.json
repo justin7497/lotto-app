@@ -10,6 +10,8 @@
     "lint": "echo \"No lint configured\""
   },
   "dependencies": {
-    "firebase-functions": "^6.6.0"
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.6.0",
+    "resend": "^4.5.1"
   }
 }

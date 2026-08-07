@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "wouter";
 import { Bell, Loader2, Smartphone } from "lucide-react";
 import {
   isPushSupported,
@@ -173,7 +174,15 @@ export default function EngagementNotificationSettings({
             <Bell className="w-4 h-4 shrink-0 mt-0.5 text-gray-400" />
             <p>
               설치 다음 날 환영 안내, 3·7일 미사용 시 리마인드, 토요일 추첨 전·후 안내를 보냅니다.
+              모바일 슬립에서 「발급완료」한 번호가 당첨되면 추첨 후 같은 푸시로 알려드립니다.
               주당 최대 {weeklyCap}회까지 발송됩니다. 로그인 없이도 받을 수 있습니다.
+            </p>
+            <p className="mt-2">
+              이 알림을 끄면 당첨 안내도 함께 꺼집니다. 당첨 내역은{" "}
+              <Link href="/win-notifications" className="text-link-brand font-semibold">
+                당첨 전광판
+              </Link>
+              에서 확인할 수 있습니다.
             </p>
           </div>
           {settings.engagementPushEnabled && (

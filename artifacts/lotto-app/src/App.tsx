@@ -31,6 +31,7 @@ import DrawLuckyBox from "@/pages/draw/DrawLuckyBox";
 import DrawPlinko from "@/pages/draw/DrawPlinko";
 import CharacterPreview from "@/pages/CharacterPreview";
 import NetPrizeCalculator from "@/pages/NetPrizeCalculator";
+import AppUpdateTest from "@/pages/AppUpdateTest";
 import AppUpdatePrompt from "@/components/AppUpdatePrompt";
 import EngagementPushBootstrap from "@/components/EngagementPushBootstrap";
 import { AUTH_UI_VISIBLE } from "@/config/authUi";
@@ -130,6 +131,7 @@ function Router() {
           <Route path="/number-stats" component={NumberStats} />
           <Route path="/win-notifications" component={WinNotifications} />
           <Route path="/notification-settings" component={NotificationSettings} />
+          <Route path="/dev/update-test" component={AppUpdateTest} />
           <Route path="/net-prize" component={NetPrizeCalculator} />
           <Route path="/home-theme" component={HomeTheme} />
           <Route path="/privacy" component={PrivacyPolicy} />

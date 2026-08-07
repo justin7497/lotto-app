@@ -184,7 +184,7 @@ service cloud.firestore {
 
     match /appConfig/{docId} {
 
-      allow read: if docId == "wishPhrases" || docId == "engagementCampaigns";
+      allow read: if docId == "wishPhrases" || docId == "engagementCampaigns" || docId == "lottoSync";
 
       allow write: if false;
 
