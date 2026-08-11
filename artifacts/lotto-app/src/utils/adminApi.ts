@@ -2,7 +2,7 @@ import { auth } from "@/lib/firebase";
 import { ensureAuthTokenReady } from "@/utils/authReady";
 import type { WishCategory } from "@/data/wishPhrases";
 
-import type { EngagementCampaign, EngagementSettings } from "@/data/engagementCampaigns";
+import type { EngagementCampaign } from "@/data/engagementCampaigns";
 
 const API_BASE = "/api/admin";
 
@@ -18,6 +18,8 @@ export type AdminStats = {
   users: {
     total: number;
     withPushTokens: number;
+    withSavedNumbers: number;
+    savedNumberSets: number;
   };
   recentDevices: Array<{
     id: string;
@@ -90,7 +92,6 @@ export function resetAdminWishPhrases(): Promise<{ ok: boolean }> {
 export type EngagementCampaignsResponse = {
   source: "default" | "remote";
   campaigns: EngagementCampaign[] | null;
-  settings: EngagementSettings | null;
   updatedAt: string | null;
   updatedBy: string | null;
 };
@@ -101,11 +102,10 @@ export function fetchAdminEngagementCampaigns(): Promise<EngagementCampaignsResp
 
 export function saveAdminEngagementCampaigns(
   campaigns: EngagementCampaign[],
-  settings: EngagementSettings,
 ): Promise<{ ok: boolean }> {
   return adminFetch<{ ok: boolean }>("/engagement-campaigns", {
     method: "PUT",
-    body: JSON.stringify({ campaigns, settings }),
+    body: JSON.stringify({ campaigns }),
   });
 }
 

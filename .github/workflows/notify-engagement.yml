@@ -11,7 +11,9 @@ on:
   schedule:
     # 매일 10:00 KST = 01:00 UTC (welcome-d1, inactive-d3/d7)
     - cron: "0 1 * * *"
-    # 토요 18:00 KST = 09:00 UTC (추첨 전 안내)
+    # 매일 20:00 KST = 11:00 UTC (2회째 일일 발송)
+    - cron: "0 11 * * *"
+    # 토요 18:00 KST = 09:00 UTC (추첨 전 안내 — saturday-18kst만)
     - cron: "0 9 * * 6"
   push:
     branches: [main]
@@ -76,6 +78,9 @@ jobs:
           ARGS=""
           if [ -n "${{ github.event.inputs.campaign }}" ]; then
             ARGS="$ARGS --campaign=${{ github.event.inputs.campaign }}"
+          fi
+          if [ "${{ github.event.schedule }}" = "0 9 * * 6" ]; then
+            ARGS="$ARGS --schedule=saturday-18kst"
           fi
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             ARGS="$ARGS --dry-run"

@@ -15,14 +15,6 @@ export type EngagementCampaign = {
   enabled?: boolean;
 };
 
-export type EngagementSettings = {
-  maxPushesPerWeek: number;
-};
-
-export const DEFAULT_ENGAGEMENT_SETTINGS: EngagementSettings = {
-  maxPushesPerWeek: 2,
-};
-
 export const CAMPAIGN_SCHEDULE_OPTIONS: Array<{ value: CampaignSchedule; label: string }> = [
   { value: "install-plus-1d", label: "설치 다음 날" },
   { value: "inactive-d3", label: "3일 미사용" },

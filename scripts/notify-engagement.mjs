@@ -8,6 +8,8 @@
  *   node scripts/notify-engagement.mjs [--dry-run]
  *   node scripts/notify-engagement.mjs --campaign=sat-post-draw
  *   node scripts/notify-engagement.mjs --schedule=saturday-18kst
+ *
+ * 자동 발송: GitHub Actions — 매일 10:00·20:00 KST (2회), 토요 18:00 KST (추첨 전)
  */
 import { resolve, dirname } from "node:path";
 import { readFileSync } from "node:fs";
@@ -20,7 +22,6 @@ import {
   filterCampaignsById,
   filterCampaignsBySchedule,
   isCampaignDueForDevice,
-  isWithinWeeklyCap,
   loadEngagementConfig,
 } from "./lib/engagementCampaigns.mjs";
 
@@ -92,15 +93,6 @@ async function hasCampaignLog(db, deviceId, campaignId) {
 /**
  * @param {import('firebase-admin/firestore').Firestore} db
  * @param {string} deviceId
- */
-async function loadRecentEngagementLogs(db, deviceId) {
-  const snap = await db.collection(`devices/${deviceId}/engagementLog`).get();
-  return snap.docs.map((d) => d.data());
-}
-
-/**
- * @param {import('firebase-admin/firestore').Firestore} db
- * @param {string} deviceId
  * @param {string} campaignId
  * @param {{ success: boolean, dryRun?: boolean }} meta
  */
@@ -134,7 +126,6 @@ export async function notifyEngagement(options = {}) {
     campaigns = campaigns.filter((c) => c.schedule !== "saturday-post-draw");
   }
   campaigns.sort((a, b) => a.priority - b.priority);
-  const maxPushesPerWeek = config.settings.maxPushesPerWeek;
 
   if (campaigns.length === 0) {
     console.log("No campaigns selected.");
@@ -143,7 +134,7 @@ export async function notifyEngagement(options = {}) {
 
   const devices = await loadDevices(db);
   console.log(
-    `Loaded ${devices.length} engagement devices. Campaigns: ${campaigns.map((c) => c.id).join(", ")} (cap ${maxPushesPerWeek}/week)`,
+    `Loaded ${devices.length} engagement devices. Campaigns: ${campaigns.map((c) => c.id).join(", ")}`,
   );
 
   let sent = 0;
@@ -151,12 +142,6 @@ export async function notifyEngagement(options = {}) {
 
   for (const device of devices) {
     const deviceId = String(device.deviceId ?? device.id);
-    const recentLogs = await loadRecentEngagementLogs(db, deviceId);
-    if (isWithinWeeklyCap(recentLogs, now, maxPushesPerWeek)) {
-      skipped += 1;
-      continue;
-    }
-
     let pushed = false;
     for (const campaign of campaigns) {
       if (!explicitCampaign && !isCampaignDueForDevice(campaign, device, now)) continue;

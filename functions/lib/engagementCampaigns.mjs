@@ -11,11 +11,6 @@
  * @property {boolean} [enabled]
  */
 
-/**
- * @typedef {Object} EngagementSettings
- * @property {number} maxPushesPerWeek
- */
-
 export const APP_BASE_URL = "https://lotto-app-ljh.web.app";
 export const ENGAGEMENT_CAMPAIGNS_DOC = "appConfig/engagementCampaigns";
 
@@ -34,11 +29,6 @@ export const SCHEDULE_LABELS = {
   "inactive-d7": "7일 미사용",
   "saturday-18kst": "토요일 18시 (추첨 전)",
   "saturday-post-draw": "토요일 추첨 후 (당첨 발표)",
-};
-
-/** @type {EngagementSettings} */
-export const DEFAULT_ENGAGEMENT_SETTINGS = {
-  maxPushesPerWeek: 2,
 };
 
 /** @type {EngagementCampaign[]} */
@@ -97,21 +87,6 @@ const MS_DAY = 24 * 60 * 60 * 1000;
  */
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
-}
-
-/**
- * @param {unknown} settings
- * @returns {{ ok: true, settings: EngagementSettings } | { ok: false, message: string }}
- */
-export function normalizeEngagementSettings(settings) {
-  const raw =
-    settings && typeof settings === "object" && "maxPushesPerWeek" in settings
-      ? Number(settings.maxPushesPerWeek)
-      : DEFAULT_ENGAGEMENT_SETTINGS.maxPushesPerWeek;
-  const maxPushesPerWeek = Number.isFinite(raw)
-    ? Math.min(7, Math.max(1, Math.round(raw)))
-    : DEFAULT_ENGAGEMENT_SETTINGS.maxPushesPerWeek;
-  return { ok: true, settings: { maxPushesPerWeek } };
 }
 
 /**
@@ -179,7 +154,6 @@ export async function loadEngagementConfig(db) {
     return {
       source: "default",
       campaigns: ENGAGEMENT_CAMPAIGNS,
-      settings: DEFAULT_ENGAGEMENT_SETTINGS,
     };
   }
 
@@ -188,7 +162,6 @@ export async function loadEngagementConfig(db) {
     return {
       source: "default",
       campaigns: ENGAGEMENT_CAMPAIGNS,
-      settings: DEFAULT_ENGAGEMENT_SETTINGS,
     };
   }
 
@@ -196,12 +169,10 @@ export async function loadEngagementConfig(db) {
   const validatedCampaigns = validateEngagementCampaigns(
     Array.isArray(data.campaigns) ? data.campaigns : ENGAGEMENT_CAMPAIGNS,
   );
-  const validatedSettings = normalizeEngagementSettings(data.settings);
 
   return {
     source: "remote",
     campaigns: validatedCampaigns.ok ? validatedCampaigns.campaigns : ENGAGEMENT_CAMPAIGNS,
-    settings: validatedSettings.ok ? validatedSettings.settings : DEFAULT_ENGAGEMENT_SETTINGS,
     updatedAt: data.updatedAt ?? null,
     updatedBy: data.updatedBy ?? null,
   };
@@ -245,7 +216,7 @@ export function isCampaignDueForDevice(campaign, device, now = new Date()) {
   switch (campaign.schedule) {
     case "install-plus-1d": {
       const elapsed = now.getTime() - installedAt.getTime();
-      // 설치 24시간 이후 첫 due 실행 시 1회 발송 (기존 48시간 창은 크론 1회/일과 맞지 않아 누락됨)
+      // 설치 24시간 이후 due (GitHub Actions 매일 10:00·20:00 KST에서 발송)
       return elapsed >= MS_DAY;
     }
     case "inactive-d3": {
@@ -288,25 +259,6 @@ export function filterCampaignsBySchedule(campaigns, onlySchedule) {
 export function filterCampaignsById(campaigns, campaignId) {
   if (!campaignId) return campaigns.filter((c) => c.enabled !== false);
   return campaigns.filter((c) => c.id === campaignId && c.enabled !== false);
-}
-
-/**
- * @param {Array<{ sentAt?: string }>} recentLogs
- * @param {Date} now
- * @param {number} [maxPushesPerWeek]
- */
-export function isWithinWeeklyCap(
-  recentLogs,
-  now = new Date(),
-  maxPushesPerWeek = DEFAULT_ENGAGEMENT_SETTINGS.maxPushesPerWeek,
-) {
-  const weekAgo = now.getTime() - 7 * MS_DAY;
-  const count = recentLogs.filter((log) => {
-    if (log.dryRun) return false;
-    const sentAt = parseIso(log.sentAt);
-    return sentAt && sentAt.getTime() >= weekAgo;
-  }).length;
-  return count >= maxPushesPerWeek;
 }
 
 /**

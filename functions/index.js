@@ -29,6 +29,15 @@ const slipOmrUrlSecret = defineSecret("SLIP_OMR_URL");
 const resendApiKeyParam = defineString("RESEND_API_KEY", { default: "" });
 const resendFromEmailParam = defineString("RESEND_FROM_EMAIL", { default: "onboarding@resend.dev" });
 const adminEmailsParam = defineString("ADMIN_EMAILS", { default: "" });
+const ebayClientIdParam = defineString("EBAY_CLIENT_ID", { default: "" });
+const ebayClientSecretParam = defineString("EBAY_CLIENT_SECRET", { default: "" });
+const ebayRedirectUriParam = defineString("EBAY_REDIRECT_URI", {
+  default: "https://kpopday-ebay.web.app/api/ebay/auth/callback",
+});
+const ebayEnvParam = defineString("EBAY_ENV", { default: "sandbox" });
+const ebayAppOriginParam = defineString("EBAY_APP_ORIGIN", {
+  default: "https://kpopday-ebay.web.app",
+});
 
 const PASSWORD_RESET_CONTINUE_URL = "https://lotto-app-ljh.web.app/reset-password";
 
@@ -173,6 +182,13 @@ function setCors(res) {
   res.set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.set("Cache-Control", "public, max-age=60");
+}
+
+function setEbayCors(res) {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Cache-Control", "no-store");
 }
 
 function parseLottoSubPath(pathOnly) {
@@ -320,6 +336,32 @@ exports.slipOmrScan = onRequest(
     } finally {
       clearTimeout(timeout);
     }
+  },
+);
+
+/** Hosting `/api/ebay/**` → eBay OAuth + Inventory API */
+exports.ebayApi = onRequest(
+  {
+    region: "asia-northeast3",
+    cors: true,
+    timeoutSeconds: 120,
+    memory: "256MiB",
+  },
+  async (req, res) => {
+    setEbayCors(res);
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+
+    const { handleEbayRequest } = await import("./lib/ebay/handlers.mjs");
+    await handleEbayRequest(req, res, {
+      clientId: ebayClientIdParam,
+      clientSecret: ebayClientSecretParam,
+      redirectUri: ebayRedirectUriParam,
+      env: ebayEnvParam,
+      appOrigin: ebayAppOriginParam,
+    });
   },
 );
 
@@ -562,7 +604,6 @@ exports.adminApi = onRequest(
         const result = await saveEngagementCampaigns(
           db,
           req.body?.campaigns,
-          req.body?.settings,
           adminCheck.email,
         );
         if (!result.ok) {
@@ -627,6 +668,27 @@ async function refreshLottoSyncCache() {
   return payload;
 }
 
+async function refreshLottoDetailSyncCache() {
+  const { fetchRoundDetail, fetchWinStores } = await getLottoDetailModule();
+  const { buildLottoDetailSyncPayload } = await import("./lib/lottoDetailSyncCache.mjs");
+  const payload = await buildLottoDetailSyncPayload(
+    findLatestRound,
+    fetchRoundDetail,
+    fetchWinStores,
+  );
+  await getAdminDb().doc("appConfig/lottoDetailSync").set(payload, { merge: true });
+  const roundKeys = Object.keys(payload.rounds);
+  console.log(
+    `lottoDetailSync cached: ${payload.latestDrwNo}회 (${roundKeys.length} detail rounds)`,
+  );
+  return payload;
+}
+
+async function refreshLottoFirestoreCaches() {
+  await refreshLottoSyncCache();
+  await refreshLottoDetailSyncCache();
+}
+
 function isSaturdayDrawWindow() {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",
@@ -640,8 +702,18 @@ function isSaturdayDrawWindow() {
   const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
   if (weekday !== "Sat") return false;
   if (hour < 20 || hour > 23) return false;
-  if (hour === 20 && minute < 45) return false;
+  // 추첨 방송 종료 직후(약 20:40)부터 동행복권 API 반영 여부를 폴링
+  if (hour === 20 && minute < 40) return false;
   return true;
+}
+
+function isDetailComplete(entry) {
+  if (!entry) return false;
+  const hasPrizes = Array.isArray(entry.prizes) && entry.prizes.length > 0;
+  const hasStores =
+    (Array.isArray(entry.stores1) && entry.stores1.length > 0) ||
+    (Array.isArray(entry.stores2) && entry.stores2.length > 0);
+  return hasPrizes && hasStores;
 }
 
 async function scheduledLottoSyncHandler() {
@@ -649,21 +721,58 @@ async function scheduledLottoSyncHandler() {
     console.log("scheduledLottoSync: outside Saturday draw window, skip");
     return;
   }
-  await refreshLottoSyncCache();
+
+  const latest = await findLatestRound();
+  if (!latest) {
+    console.log("scheduledLottoSync: latest round not available yet");
+    return;
+  }
+
+  const db = getAdminDb();
+  const [syncSnap, detailSnap] = await Promise.all([
+    db.doc("appConfig/lottoSync").get(),
+    db.doc("appConfig/lottoDetailSync").get(),
+  ]);
+  const cachedSyncLatest = Number(syncSnap.data()?.latestDrwNo) || 0;
+  const detailRounds = detailSnap.data()?.rounds ?? {};
+  const latestDetail = detailRounds[String(latest.drwNo)];
+  const detailComplete = isDetailComplete(latestDetail);
+
+  if (latest.drwNo > cachedSyncLatest) {
+    await refreshLottoSyncCache();
+    console.log(`scheduledLottoSync: numbers updated to ${latest.drwNo}회`);
+  }
+
+  if (latest.drwNo > cachedSyncLatest || !detailComplete) {
+    await refreshLottoDetailSyncCache();
+    console.log(`scheduledLottoSync: detail refresh for ${latest.drwNo}회`);
+    return;
+  }
+
+  console.log(`scheduledLottoSync: ${latest.drwNo}회 already complete, skip`);
 }
 
-/** 토요일 추첨 후 Firestore appConfig/lottoSync 갱신 (GitHub Actions 백업) */
-for (const schedule of ["55 20 * * 6", "10,25,40 21 * * 6", "5,20,35,50 22 * * 6"]) {
-  const suffix = schedule.replace(/[^0-9]/g, "").slice(0, 8);
-  exports[`scheduledLottoSync${suffix}`] = onSchedule(
-    { schedule, timeZone: "Asia/Seoul", region: "asia-northeast3" },
-    scheduledLottoSyncHandler,
-  );
-}
+/** 토요일 추첨 직후 Firestore 갱신 — 동행복권 반영 시점에 맞춰 3분 간격 폴링 */
+exports.scheduledLottoSyncSat20 = onSchedule(
+  { schedule: "40,43,46,49,52,55,58 20 * * 6", timeZone: "Asia/Seoul", region: "asia-northeast3" },
+  scheduledLottoSyncHandler,
+);
+exports.scheduledLottoSyncSat21 = onSchedule(
+  {
+    schedule: "1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,52,55,58 21 * * 6",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+  },
+  scheduledLottoSyncHandler,
+);
+exports.scheduledLottoSyncSat22 = onSchedule(
+  { schedule: "5,20,35,50 22 * * 6", timeZone: "Asia/Seoul", region: "asia-northeast3" },
+  scheduledLottoSyncHandler,
+);
 
 exports.scheduledLottoSyncSun0900 = onSchedule(
   { schedule: "0 9 * * 0", timeZone: "Asia/Seoul", region: "asia-northeast3" },
   async () => {
-    await refreshLottoSyncCache();
+    await refreshLottoFirestoreCaches();
   },
 );

@@ -7,9 +7,7 @@ import {
 import {
   CAMPAIGN_SCHEDULE_OPTIONS,
   DEFAULT_ENGAGEMENT_CAMPAIGNS,
-  DEFAULT_ENGAGEMENT_SETTINGS,
   type EngagementCampaign,
-  type EngagementSettings,
 } from "@/data/engagementCampaigns";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -36,7 +34,6 @@ export default function AdminEngagementCampaigns({
   const [campaigns, setCampaigns] = useState<EngagementCampaign[]>(() =>
     DEFAULT_ENGAGEMENT_CAMPAIGNS.map((row) => ({ ...row })),
   );
-  const [settings, setSettings] = useState<EngagementSettings>(DEFAULT_ENGAGEMENT_SETTINGS);
   const [source, setSource] = useState<EngagementCampaignsResponse["source"]>("default");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [updatedBy, setUpdatedBy] = useState<string | null>(null);
@@ -50,7 +47,6 @@ export default function AdminEngagementCampaigns({
       setSource(data.source);
       setUpdatedAt(data.updatedAt);
       setUpdatedBy(data.updatedBy);
-      setSettings(data.settings ?? DEFAULT_ENGAGEMENT_SETTINGS);
       if (data.campaigns && data.campaigns.length > 0) {
         setCampaigns(data.campaigns.map((row) => ({ ...row, enabled: row.enabled !== false })));
       } else {
@@ -76,8 +72,8 @@ export default function AdminEngagementCampaigns({
   async function handleSave() {
     setSaving(true);
     try {
-      await saveAdminEngagementCampaigns(campaigns, settings);
-      onMessage("알림 문구·주기 설정을 저장했습니다.");
+      await saveAdminEngagementCampaigns(campaigns);
+      onMessage("알림 문구를 저장했습니다.");
       await loadCampaigns();
     } catch (err) {
       onError(err instanceof Error ? err.message : "저장에 실패했습니다.");
@@ -92,7 +88,6 @@ export default function AdminEngagementCampaigns({
     try {
       await resetAdminEngagementCampaigns();
       setCampaigns(DEFAULT_ENGAGEMENT_CAMPAIGNS.map((row) => ({ ...row })));
-      setSettings(DEFAULT_ENGAGEMENT_SETTINGS);
       onMessage("기본 알림 설정으로 되돌렸습니다.");
       await loadCampaigns();
     } catch (err) {
@@ -128,27 +123,12 @@ export default function AdminEngagementCampaigns({
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 mb-4">
-        <p className="text-sm font-bold text-gray-900">발송 주기 제한</p>
+        <p className="text-sm font-bold text-gray-900">자동 발송 안내</p>
         <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-          기기당 7일 동안 보낼 수 있는 최대 푸시 횟수입니다. 우선순위가 높은 캠페인부터 1회 실행마다
-          1건만 발송됩니다.
+          GitHub Actions가 <strong>매일 10:00·20:00 (KST) 2회</strong>, 토요일 18:00에 추첨 전
+          캠페인을 실행합니다. 실행마다 우선순위가 높은 due 캠페인 1건만 기기당 발송되며, 같은
+          캠페인은 기기당 1회만 보냅니다.
         </p>
-        <label className="mt-3 flex items-center gap-3">
-          <span className="text-sm font-semibold text-gray-700 shrink-0">주당 최대</span>
-          <input
-            type="number"
-            min={1}
-            max={7}
-            value={settings.maxPushesPerWeek}
-            onChange={(e) =>
-              setSettings({
-                maxPushesPerWeek: Math.min(7, Math.max(1, Number(e.target.value) || 1)),
-              })
-            }
-            className="w-20 rounded-xl border border-gray-200 px-3 py-2 text-base bg-white"
-          />
-          <span className="text-sm text-gray-600">회</span>
-        </label>
       </div>
 
       <div className="space-y-3">
