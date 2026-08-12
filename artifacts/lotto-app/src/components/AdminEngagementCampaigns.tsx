@@ -126,8 +126,9 @@ export default function AdminEngagementCampaigns({
         <p className="text-sm font-bold text-gray-900">자동 발송 안내</p>
         <p className="text-xs text-gray-500 mt-1 leading-relaxed">
           GitHub Actions가 <strong>매일 10:00·20:00 (KST) 2회</strong>, 토요일 18:00에 추첨 전
-          캠페인을 실행합니다. 실행마다 우선순위가 높은 due 캠페인 1건만 기기당 발송되며, 같은
-          캠페인은 기기당 1회만 보냅니다.
+          캠페인을 실행합니다. 실행마다 우선순위가 높은 due 캠페인 1건만 기기당 발송됩니다. 일회성
+          캠페인(환영·미사용 등)은 기기당 1회, <strong>매일 오전/저녁</strong> 캠페인은 하루 1회씩
+          반복됩니다.
         </p>
       </div>
 

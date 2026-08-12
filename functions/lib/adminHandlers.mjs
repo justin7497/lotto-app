@@ -1,6 +1,7 @@
 import {
   ENGAGEMENT_CAMPAIGNS,
   ENGAGEMENT_CAMPAIGNS_DOC,
+  mergeDefaultEngagementCampaigns,
   validateEngagementCampaigns,
 } from "./engagementCampaigns.mjs";
 
@@ -261,9 +262,10 @@ export async function getEngagementCampaigns(db) {
   const validatedCampaigns = validateEngagementCampaigns(
     Array.isArray(data.campaigns) ? data.campaigns : ENGAGEMENT_CAMPAIGNS,
   );
+  const base = validatedCampaigns.ok ? validatedCampaigns.campaigns : ENGAGEMENT_CAMPAIGNS;
   return {
     source: "remote",
-    campaigns: validatedCampaigns.ok ? validatedCampaigns.campaigns : ENGAGEMENT_CAMPAIGNS,
+    campaigns: mergeDefaultEngagementCampaigns(base),
     updatedAt: data.updatedAt ?? null,
     updatedBy: data.updatedBy ?? null,
   };

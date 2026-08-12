@@ -19,6 +19,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import {
   buildPushPayload,
+  engagementLogDocId,
   filterCampaignsById,
   filterCampaignsBySchedule,
   isCampaignDueForDevice,
@@ -93,12 +94,12 @@ async function hasCampaignLog(db, deviceId, campaignId) {
 /**
  * @param {import('firebase-admin/firestore').Firestore} db
  * @param {string} deviceId
- * @param {string} campaignId
- * @param {{ success: boolean, dryRun?: boolean }} meta
+ * @param {string} logDocId
+ * @param {{ success: boolean, dryRun?: boolean, campaignId?: string }} meta
  */
-async function writeEngagementLog(db, deviceId, campaignId, meta) {
-  await db.doc(`devices/${deviceId}/engagementLog/${campaignId}`).set({
-    campaignId,
+async function writeEngagementLog(db, deviceId, logDocId, meta) {
+  await db.doc(`devices/${deviceId}/engagementLog/${logDocId}`).set({
+    campaignId: meta.campaignId ?? logDocId,
     sentAt: new Date().toISOString(),
     success: meta.success,
     dryRun: Boolean(meta.dryRun),
@@ -145,13 +146,14 @@ export async function notifyEngagement(options = {}) {
     let pushed = false;
     for (const campaign of campaigns) {
       if (!explicitCampaign && !isCampaignDueForDevice(campaign, device, now)) continue;
-      if (await hasCampaignLog(db, deviceId, campaign.id)) continue;
+      const logId = engagementLogDocId(campaign, now);
+      if (await hasCampaignLog(db, deviceId, logId)) continue;
 
       const token = String(device.fcmToken);
       const payload = buildPushPayload(campaign);
 
       if (dryRun) {
-        console.log(`  [dry-run] ${deviceId} ← ${campaign.id}: ${campaign.title}`);
+        console.log(`  [dry-run] ${deviceId} ← ${campaign.id} (${logId}): ${campaign.title}`);
         sent += 1;
         pushed = true;
         break;
@@ -164,8 +166,11 @@ export async function notifyEngagement(options = {}) {
         });
         const ok = result.successCount > 0;
         if (ok) {
-          await writeEngagementLog(db, deviceId, campaign.id, { success: true });
-          console.log(`  push sent → ${deviceId}: ${campaign.id}`);
+          await writeEngagementLog(db, deviceId, logId, {
+            success: true,
+            campaignId: campaign.id,
+          });
+          console.log(`  push sent → ${deviceId}: ${campaign.id} (${logId})`);
           sent += 1;
           pushed = true;
         } else {

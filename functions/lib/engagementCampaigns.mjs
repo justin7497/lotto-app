@@ -1,4 +1,4 @@
-/** @typedef {'install-plus-1d' | 'inactive-d3' | 'inactive-d7' | 'saturday-18kst' | 'saturday-post-draw'} CampaignSchedule */
+/** @typedef {'install-plus-1d' | 'inactive-d3' | 'inactive-d7' | 'saturday-18kst' | 'saturday-post-draw' | 'daily-morning' | 'daily-evening'} CampaignSchedule */
 
 /**
  * @typedef {Object} EngagementCampaign
@@ -20,6 +20,8 @@ export const CAMPAIGN_SCHEDULES = [
   "inactive-d7",
   "saturday-18kst",
   "saturday-post-draw",
+  "daily-morning",
+  "daily-evening",
 ];
 
 /** @type {Record<CampaignSchedule, string>} */
@@ -29,6 +31,8 @@ export const SCHEDULE_LABELS = {
   "inactive-d7": "7일 미사용",
   "saturday-18kst": "토요일 18시 (추첨 전)",
   "saturday-post-draw": "토요일 추첨 후 (당첨 발표)",
+  "daily-morning": "매일 오전 (10시)",
+  "daily-evening": "매일 저녁 (20시)",
 };
 
 /** @type {EngagementCampaign[]} */
@@ -76,6 +80,24 @@ export const ENGAGEMENT_CAMPAIGNS = [
     link: "/",
     schedule: "inactive-d7",
     priority: 50,
+    enabled: true,
+  },
+  {
+    id: "daily-morning",
+    title: "오늘의 행운 번호",
+    body: "오늘도 소원로또에서 번호를 만들어 보세요",
+    link: "/generator",
+    schedule: "daily-morning",
+    priority: 60,
+    enabled: true,
+  },
+  {
+    id: "daily-evening",
+    title: "저녁 한 판, 행운 한 스푼",
+    body: "저장한 번호와 당첨 확인을 이어서 해보세요",
+    link: "/my-numbers",
+    schedule: "daily-evening",
+    priority: 70,
     enabled: true,
   },
 ];
@@ -147,6 +169,18 @@ export function validateEngagementCampaigns(campaigns) {
 }
 
 /**
+ * Firestore에 없는 기본 캠페인(id)을 뒤에 보강합니다.
+ * @param {EngagementCampaign[]} campaigns
+ */
+export function mergeDefaultEngagementCampaigns(campaigns) {
+  const byId = new Map(campaigns.map((row) => [row.id, row]));
+  for (const def of ENGAGEMENT_CAMPAIGNS) {
+    if (!byId.has(def.id)) byId.set(def.id, { ...def });
+  }
+  return [...byId.values()].sort((a, b) => a.priority - b.priority);
+}
+
+/**
  * @param {import('firebase-admin/firestore').Firestore | null | undefined} db
  */
 export async function loadEngagementConfig(db) {
@@ -169,10 +203,11 @@ export async function loadEngagementConfig(db) {
   const validatedCampaigns = validateEngagementCampaigns(
     Array.isArray(data.campaigns) ? data.campaigns : ENGAGEMENT_CAMPAIGNS,
   );
+  const base = validatedCampaigns.ok ? validatedCampaigns.campaigns : ENGAGEMENT_CAMPAIGNS;
 
   return {
     source: "remote",
-    campaigns: validatedCampaigns.ok ? validatedCampaigns.campaigns : ENGAGEMENT_CAMPAIGNS,
+    campaigns: mergeDefaultEngagementCampaigns(base),
     updatedAt: data.updatedAt ?? null,
     updatedBy: data.updatedBy ?? null,
   };
@@ -202,12 +237,41 @@ function parseIso(iso) {
 }
 
 /**
+ * 매일 반복 캠페인 여부
+ * @param {string} schedule
+ */
+export function isDailyRecurringSchedule(schedule) {
+  return schedule === "daily-morning" || schedule === "daily-evening";
+}
+
+/**
+ * engagementLog 문서 id — 매일 캠페인은 날짜(KST)를 붙여 하루 1회만 막음
+ * @param {Pick<EngagementCampaign, 'id' | 'schedule'>} campaign
+ * @param {Date} [now]
+ */
+export function engagementLogDocId(campaign, now = new Date()) {
+  if (!isDailyRecurringSchedule(campaign.schedule)) return campaign.id;
+  const kst = toKst(now);
+  const y = kst.getUTCFullYear();
+  const m = String(kst.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(kst.getUTCDate()).padStart(2, "0");
+  return `${campaign.id}-${y}${m}${d}`;
+}
+
+/**
  * @param {EngagementCampaign} campaign
  * @param {{ installedAt?: string, lastActiveAt?: string }} device
  * @param {Date} now
  */
 export function isCampaignDueForDevice(campaign, device, now = new Date()) {
   if (campaign.enabled === false) return false;
+
+  if (campaign.schedule === "daily-morning" || campaign.schedule === "daily-evening") {
+    const hour = toKst(now).getUTCHours();
+    // GitHub Actions 지연 허용 창
+    if (campaign.schedule === "daily-morning") return hour >= 9 && hour <= 14;
+    return hour >= 19 && hour <= 23;
+  }
 
   const installedAt = parseIso(device.installedAt);
   const lastActiveAt = parseIso(device.lastActiveAt) ?? installedAt;

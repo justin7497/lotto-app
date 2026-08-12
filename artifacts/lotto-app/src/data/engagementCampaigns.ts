@@ -3,7 +3,9 @@ export type CampaignSchedule =
   | "inactive-d3"
   | "inactive-d7"
   | "saturday-18kst"
-  | "saturday-post-draw";
+  | "saturday-post-draw"
+  | "daily-morning"
+  | "daily-evening";
 
 export type EngagementCampaign = {
   id: string;
@@ -21,6 +23,8 @@ export const CAMPAIGN_SCHEDULE_OPTIONS: Array<{ value: CampaignSchedule; label: 
   { value: "inactive-d7", label: "7일 미사용" },
   { value: "saturday-18kst", label: "토요일 18시 (추첨 전)" },
   { value: "saturday-post-draw", label: "토요일 추첨 후 (당첨 발표)" },
+  { value: "daily-morning", label: "매일 오전 (10시)" },
+  { value: "daily-evening", label: "매일 저녁 (20시)" },
 ];
 
 export const DEFAULT_ENGAGEMENT_CAMPAIGNS: EngagementCampaign[] = [
@@ -67,6 +71,24 @@ export const DEFAULT_ENGAGEMENT_CAMPAIGNS: EngagementCampaign[] = [
     link: "/",
     schedule: "inactive-d7",
     priority: 50,
+    enabled: true,
+  },
+  {
+    id: "daily-morning",
+    title: "오늘의 행운 번호",
+    body: "오늘도 소원로또에서 번호를 만들어 보세요",
+    link: "/generator",
+    schedule: "daily-morning",
+    priority: 60,
+    enabled: true,
+  },
+  {
+    id: "daily-evening",
+    title: "저녁 한 판, 행운 한 스푼",
+    body: "저장한 번호와 당첨 확인을 이어서 해보세요",
+    link: "/my-numbers",
+    schedule: "daily-evening",
+    priority: 70,
     enabled: true,
   },
 ];
