@@ -19,6 +19,9 @@ const LOCAL_ACCOUNT_KEYS = [
   "lotto_migrated_firestore_v1",
   "lotto_saju_profile_v2",
   "lotto_saju_profile_v1",
+  "lotto_saju_people_v1",
+  "lotto_saju_daily_v1",
+  "lotto_saju_daily_map_v1",
   "lotto_saju_weekly_v1",
 ] as const;
 

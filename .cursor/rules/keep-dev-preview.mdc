@@ -1,0 +1,48 @@
+---
+description: 대화 시작 시 개발 허브·로컬 서버를 항상 켜 두고 유지
+alwaysApply: true
+---
+
+# 개발 허브 · 미리보기 (항상)
+
+**대화를 열면 가장 먼저** 아래를 수행한다. lotto-app과 무관한 질문(설정, git만 등)이어도 서버·허브는 켜 둔다.
+
+## 1. 대화 시작 — 필수 (첫 작업)
+
+1. `http://localhost:5173` 응답 확인. 없으면 루트에서 `pnpm dev:lotto`를 **백그라운드**로 실행한다.
+2. 브라우저 MCP로 **`http://localhost:5173/dev/release`** 를 연다. (개발용 화면 허브)
+3. API `http://localhost:8080/api/health` 가 살아 있는지 확인한다.
+
+허브 탭을 닫지 않는다. 작업 내내 옆에 두고 버전·변경 파일·화면 링크를 본다.
+
+## 2. 서버
+
+- **연결 거부(-102) 또는 타임아웃**이면 5173/8080 정리 후 `node scripts/dev-lotto.mjs` 재실행.
+- API 프록시: `http://localhost:8080`
+- 미리보기가 끊기면 서버 재시작 후 **허브 URL부터** 다시 연다.
+
+## 3. 빌드 · 화면 허브 (`/dev/release`)
+
+- 버전 정보(구글 앱 / APK / 웹 빌드)
+- Git 변경 파일 (빌드 전 diff)
+- **모든 화면** 링크 — 개별 페이지 확인 시 허브에서 열거나 MCP `browser_navigate`
+
+UI·배포 전 허브에서 **새로고침**으로 변경 사항을 본다.
+
+## 4. 화면 확인
+
+- 기본: 허브 `/dev/release` 유지
+- 수정한 페이지는 허브 링크 또는 `browser_navigate`로 추가 확인
+- 변경 후 `browser_snapshot` / `browser_take_screenshot`으로 검증
+
+## 5. 통합 빌드
+
+- 웹만: `pnpm release:lotto`
+- 웹 + AAB: `pnpm release:lotto --aab`
+- 웹 + 배포: `pnpm release:lotto --deploy`
+- 전체: `pnpm release:lotto --aab --deploy`
+
+## 6. 작업 중
+
+- 배포·리팩터 중에도 dev 서버와 **허브 탭**을 끄지 않는다.
+- HMR 오류 시 로그 확인 후 `/dev/release`부터 다시 연다.

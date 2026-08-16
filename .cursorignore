@@ -1,0 +1,15 @@
+﻿# Cursor indexing — keep the renderer off huge generated trees
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.cache/
+.local/
+.firebase/
+**/.gradle/
+**/build/
+artifacts/lotto-app/android-twa/app/build/
+artifacts/lotto-app/android-twa/.gradle/
+*.aab
+*.apk
+*.tsbuildinfo

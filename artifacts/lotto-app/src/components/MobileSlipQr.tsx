@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import QRCode from "qrcode";
 import { CheckCircle2, Lock, QrCode, ShieldCheck, Smartphone, Store, X } from "lucide-react";
+import { renderSlipQrDataUrl } from "@/utils/slipQrRender";
 import {
   TrustHeader,
   TrustPanel,
   TrustStepGuide,
 } from "@/components/TrustUI";
 import { encodeGamesToMobileSlipPayload, GAMES_PER_SLIP } from "@/utils/mobileSlip";
+import { normalizeSlipGameForEncode } from "@/utils/slipPickResolve";
 import type { SlipGame as DraftSlipGame } from "@/utils/slipDraft";
 import { useOverlayBack } from "@/hooks/useOverlayBack";
 
@@ -24,15 +25,6 @@ const SLIP_QR_STEPS = [
   { step: "2", text: "QR 표시", icon: QrCode },
   { step: "3", text: "판매점 스캔", icon: Store },
 ] as const;
-
-async function renderQrDataUrl(payload: string, size: number): Promise<string> {
-  return QRCode.toDataURL(payload, {
-    errorCorrectionLevel: "M",
-    margin: 1,
-    width: size,
-    color: { dark: "#000000", light: "#ffffff" },
-  });
-}
 
 export default function MobileSlipQr({
   games,
@@ -59,10 +51,7 @@ export default function MobileSlipQr({
     if (activeGames.length === 0) return "";
     try {
       return encodeGamesToMobileSlipPayload(
-        activeGames.map((game) => ({
-          numbers: game.numbers,
-          mode: game.mode ?? (game.numbers.length === 0 ? "A" : "M"),
-        })),
+        activeGames.map((game) => normalizeSlipGameForEncode(game)),
       );
     } catch {
       return "";
@@ -86,7 +75,7 @@ export default function MobileSlipQr({
     }
     let cancelled = false;
     setError(null);
-    renderQrDataUrl(payload, 1024)
+    renderSlipQrDataUrl(payload)
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })

@@ -79,6 +79,18 @@ export default function AdminPanels({ admin, variant = "mobile" }: AdminPanelsPr
                   {admin.stats.devices.optOut.toLocaleString("ko-KR")}
                 </p>
               </div>
+              <div className="admin-stat-card admin-stat-card--ok">
+                <p className="admin-stat-card__label">번호 저장 계정</p>
+                <p className="admin-stat-card__value">
+                  {(admin.stats.users.withSavedNumbers ?? 0).toLocaleString("ko-KR")}
+                </p>
+              </div>
+              <div className="admin-stat-card">
+                <p className="admin-stat-card__label">저장 번호 세트</p>
+                <p className="admin-stat-card__value">
+                  {(admin.stats.users.savedNumberSets ?? 0).toLocaleString("ko-KR")}
+                </p>
+              </div>
             </div>
 
             <p className="text-xs text-gray-400 mt-4">
@@ -96,6 +108,12 @@ export default function AdminPanels({ admin, variant = "mobile" }: AdminPanelsPr
                 </li>
                 <li>
                   <strong>토큰 없음</strong> — 앱에서 「이 기기 알림 등록」 필요
+                </li>
+                <li>
+                  <strong>번호 저장 계정</strong> — 로그인 후 클라우드에 번호를 저장한 계정 수 (비로그인 로컬 저장은 제외)
+                </li>
+                <li>
+                  <strong>저장 번호 세트</strong> — 계정별 저장된 번호 묶음(회차/생성 단위) 문서 수
                 </li>
                 <li>
                   <strong>마지막 자동 알림</strong> — engagement 캠페인 발송 이력 (dry-run 제외)

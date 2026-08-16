@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import DrawGameShell from "@/components/DrawGameShell";
+import DrawIllustScene from "@/components/DrawIllustScene";
 import DrawSceneBall from "@/components/DrawSceneBall";
 import { useDrawSave } from "@/hooks/useDrawSave";
 import { runDrawReveal } from "@/utils/drawReveal";
@@ -58,6 +59,7 @@ export default function DrawRoulette() {
   }, [clearTimers, revealNumbers, resetSaveState, schedule]);
 
   const busy = phase === "spinning" || phase === "revealing";
+  const showWheel = phase !== "idle";
   const statusText =
     phase === "idle"
       ? "돌림판을 돌리면 행운 번호가 정해집니다"
@@ -83,58 +85,58 @@ export default function DrawRoulette() {
       saveError={saveError}
       onSave={() => void handleSave()}
     >
-      <div className="draw-roulette">
-        <div className="draw-roulette__pointer" aria-hidden />
-        <div className="draw-roulette__frame" aria-hidden>
-          <motion.div
-            className="draw-roulette__wheel"
-            animate={{ rotate: spinDeg }}
-            transition={
-              phase === "spinning"
-                ? { duration: SPIN_MS / 1000, ease: [0.12, 0.8, 0.2, 1] }
-                : { duration: 0 }
-            }
-          >
-            <div className="draw-roulette__face" />
-            {Array.from({ length: WHEEL_SLICES }, (_, i) => (
-              <span
-                key={i}
-                className="draw-roulette__divider"
-                style={{ transform: `rotate(${(360 / WHEEL_SLICES) * i}deg)` }}
-              />
-            ))}
-            {Array.from({ length: WHEEL_SLICES }, (_, i) => (
-              <span
-                key={`dot-${i}`}
-                className="draw-roulette__rim-dot"
-                style={{ transform: `rotate(${(360 / WHEEL_SLICES) * i + 15}deg)` }}
-              />
-            ))}
-            <span className="draw-roulette__hub">행운</span>
-            {drawn.map((num, i) => {
-              const angle = (360 / DRAW_BALL_COUNT) * i;
-              return (
-                <div
-                  key={`wheel-ball-${i}-${num}`}
-                  className="draw-roulette__wheel-ball"
-                  style={{ transform: `rotate(${angle}deg) translateY(-3.05rem)` }}
-                >
+      <DrawIllustScene
+        src="/illustrations/illust-draw-roulette.png"
+        className={`draw-roulette${showWheel ? " draw-roulette--active" : ""}`}
+      >
+        {showWheel ? (
+          <div className="draw-roulette__wheel-zone">
+            <motion.div
+              className="draw-roulette__wheel"
+              animate={{ rotate: spinDeg }}
+              transition={
+                phase === "spinning"
+                  ? { duration: SPIN_MS / 1000, ease: [0.12, 0.8, 0.2, 1] }
+                  : { duration: 0 }
+              }
+            >
+              <div className="draw-roulette__face" />
+              {Array.from({ length: WHEEL_SLICES }, (_, i) => (
+                <span
+                  key={i}
+                  className="draw-roulette__divider"
+                  style={{ transform: `rotate(${(360 / WHEEL_SLICES) * i}deg)` }}
+                />
+              ))}
+              {Array.from({ length: WHEEL_SLICES }, (_, i) => (
+                <span
+                  key={`dot-${i}`}
+                  className="draw-roulette__rim-dot"
+                  style={{ transform: `rotate(${(360 / WHEEL_SLICES) * i + 15}deg)` }}
+                />
+              ))}
+              <span className="draw-roulette__hub">행운</span>
+              {drawn.map((num, i) => {
+                const angle = (360 / DRAW_BALL_COUNT) * i;
+                return (
                   <div
-                    className="draw-roulette__wheel-ball-upright"
-                    style={{ transform: `rotate(${-angle - spinDeg}deg)` }}
+                    key={`wheel-ball-${i}-${num}`}
+                    className="draw-roulette__wheel-ball"
+                    style={{ transform: `rotate(${angle}deg) translateY(-42%)` }}
                   >
-                    <DrawSceneBall number={num} scene="sm" />
+                    <div
+                      className="draw-roulette__wheel-ball-upright"
+                      style={{ transform: `rotate(${-angle - spinDeg}deg)` }}
+                    >
+                      <DrawSceneBall number={num} scene="sm" />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </motion.div>
-        </div>
-        <div className="draw-roulette__stand" aria-hidden>
-          <span className="draw-roulette__stand-neck" />
-          <span className="draw-roulette__stand-base" />
-        </div>
-      </div>
+                );
+              })}
+            </motion.div>
+          </div>
+        ) : null}
+      </DrawIllustScene>
     </DrawGameShell>
   );
 }

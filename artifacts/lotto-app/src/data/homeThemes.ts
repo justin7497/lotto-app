@@ -7,6 +7,7 @@ export type HomeThemeId = "sowoni" | "characters" | "together" | "vivid";
 
 export type HomeThemePopupKey =
   | "ticketQr"
+  | "bulkTicketQr"
   | "myWish"
   | "slipQr"
   | "myNumbers"
@@ -58,6 +59,7 @@ const SOWONI_THEME: HomeThemeAssets = {
   },
   popup: {
     ticketQr: MASCOT_ASSETS.catTicketQr,
+    bulkTicketQr: "/illustrations/illust-mascot-cat-tickets-bulk.png",
     myWish: MASCOT_ASSETS.catWish,
     slipQr: MASCOT_ASSETS.catSlip,
     myNumbers: MASCOT_ASSETS.catMyNumbers,

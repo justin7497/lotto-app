@@ -20,6 +20,7 @@ import {
   saveFavoritePick,
 } from "@/utils/favoriteNumbers";
 import { SLIP_FIXED_QR_PATH, sendPickToSlip } from "@/utils/sendToSlip";
+import { resolveSlipPickForEncode } from "@/utils/slipPickResolve";
 
 const ALL_NUMBERS = Array.from({ length: 45 }, (_, i) => i + 1);
 const SLOT_COUNT = 6;
@@ -34,6 +35,7 @@ export default function MyPicks() {
   const { picks, loading, refresh } = useFavoritePicks();
   const [, navigate] = useLocation();
   const [selected, setSelected] = useState<Set<number>>(emptySelection);
+  const [manualPicked, setManualPicked] = useState<Set<number>>(emptySelection);
   const [fixedNums, setFixedNums] = useState<Set<number>>(emptySelection);
   const [excludedNums, setExcludedNums] = useState<Set<number>>(emptySelection);
   const [modal, setModal] = useState<ModalKind>(null);
@@ -55,13 +57,22 @@ export default function MyPicks() {
     [selected],
   );
 
+  const pickList = useMemo(
+    () =>
+      (autoSemi ? [...manualPicked] : [...selected])
+        .filter((n) => !excludedNums.has(n))
+        .sort((a, b) => a - b),
+    [autoSemi, manualPicked, selected, excludedNums],
+  );
+
   const previewGame = useMemo((): SlipGame | null => {
-    if (selectedList.length === 0 && !autoSemi) return null;
-    if (autoSemi && selectedList.length === 0) {
-      return { numbers: [], mode: "A" };
+    if (pickList.length === 0 && !autoSemi) return null;
+    try {
+      return resolveSlipPickForEncode(pickList, { autoSemi });
+    } catch {
+      return null;
     }
-    return { numbers: selectedList, mode: "M" };
-  }, [autoSemi, selectedList]);
+  }, [autoSemi, pickList]);
 
   const orderedPicks = useMemo(
     () => [...picks].sort((a, b) => b.savedAt.localeCompare(a.savedAt)),
@@ -116,6 +127,7 @@ export default function MyPicks() {
     if (modal === "fixed") {
       const nextFixed = new Set(draft);
       setFixedNums(nextFixed);
+      setManualPicked(new Set(nextFixed));
       setSelected((prev) => {
         const next = new Set(prev);
         for (const n of excludedNums) next.delete(n);
@@ -157,6 +169,12 @@ export default function MyPicks() {
       const next = new Set(prev);
       if (next.has(n)) {
         next.delete(n);
+        setManualPicked((manual) => {
+          if (!manual.has(n)) return manual;
+          const nextManual = new Set(manual);
+          nextManual.delete(n);
+          return nextManual;
+        });
         setFixedNums((f) => {
           if (!f.has(n)) return f;
           const nf = new Set(f);
@@ -170,18 +188,27 @@ export default function MyPicks() {
         return prev;
       }
       next.add(n);
+      setManualPicked((manual) => new Set(manual).add(n));
       return next;
     });
   }
 
   function handleAutoFill() {
     setError(null);
+    if (autoSemi) {
+      setError(
+        "자동/반자동 모드에서는 1~5개만 직접 고르거나, 번호 없이 저장·슬립 보내기를 누르세요.",
+      );
+      return;
+    }
     const base = new Set(fixedNums);
     for (const n of selected) {
       if (!excludedNums.has(n)) base.add(n);
     }
     if (base.size >= SLOT_COUNT) {
-      setSelected(new Set([...base].slice(0, SLOT_COUNT)));
+      const filled = new Set([...base].slice(0, SLOT_COUNT));
+      setSelected(filled);
+      setManualPicked(new Set(filled));
       return;
     }
     const need = SLOT_COUNT - base.size;
@@ -194,17 +221,20 @@ export default function MyPicks() {
       setError("제외수가 너무 많아 6개를 채울 수 없습니다.");
       return;
     }
-    setSelected(new Set([...base, ...pool.slice(0, need)]));
+    const filled = new Set([...base, ...pool.slice(0, need)]);
+    setSelected(filled);
+    setManualPicked(new Set(filled));
   }
 
   function handleReset() {
     setSelected(new Set(fixedNums));
+    setManualPicked(new Set(fixedNums));
     setError(null);
   }
 
   async function handleSave() {
     setError(null);
-    const nums = selectedList;
+    const nums = pickList;
     if (nums.length === 0) {
       if (!autoSemi) {
         setError("번호를 선택하거나 자동/반자동을 켜 주세요.");
@@ -214,13 +244,22 @@ export default function MyPicks() {
       setError("번호 6개를 선택하거나 자동/반자동을 켜 주세요.");
       return;
     }
-    const mode = nums.length === 0 ? "A" : "M";
-    const saved = await saveFavoritePick("", nums, mode);
+
+    let resolved: { numbers: number[]; mode: "M" | "A" };
+    try {
+      resolved = resolveSlipPickForEncode(nums, { autoSemi });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "번호를 확인해 주세요.");
+      return;
+    }
+
+    const saved = await saveFavoritePick("", resolved.numbers, resolved.mode);
     if (!saved) {
       setError("저장에 실패했습니다.");
       return;
     }
     setSelected(new Set(fixedNums));
+    setManualPicked(new Set(fixedNums));
     refreshPicks();
     setShowSavedModal(true);
   }
@@ -228,7 +267,7 @@ export default function MyPicks() {
   function handleSendToSlip() {
     setError(null);
     const result = sendPickToSlip(
-      { numbers: selectedList, autoSemi },
+      { numbers: pickList, autoSemi },
       { source: "mypicks" },
     );
     if (!result.ok) {

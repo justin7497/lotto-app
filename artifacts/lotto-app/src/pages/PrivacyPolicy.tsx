@@ -55,7 +55,7 @@ const SECTIONS = [
 ] as const;
 
 export default function PrivacyPolicy() {
-  const goBack = useGoBack("/");
+  const goBack = useGoBack();
 
   return (
     <div className="page-content max-w-2xl mx-auto">

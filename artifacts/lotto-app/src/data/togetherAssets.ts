@@ -12,6 +12,7 @@ export const TOGETHER_POSES = {
   },
   myLotto: {
     ticketQr: `${BASE}/illust-together-ticket-qr.png`,
+    bulkTicketQr: `${BASE}/illust-together-tickets-bulk.png`,
     myWish: `${BASE}/illust-together-my-wish.png`,
     myNumbers: `${BASE}/illust-together-my-numbers.png`,
     win: `${BASE}/illust-together-win.png`,
@@ -49,6 +50,7 @@ export const HOME_TOGETHER = {
   },
   popup: {
     ticketQr: TOGETHER_POSES.myLotto.ticketQr,
+    bulkTicketQr: TOGETHER_POSES.myLotto.bulkTicketQr,
     myWish: TOGETHER_POSES.myLotto.myWish,
     slipQr: TOGETHER_POSES.myLotto.slipQr,
     myNumbers: TOGETHER_POSES.myLotto.myNumbers,

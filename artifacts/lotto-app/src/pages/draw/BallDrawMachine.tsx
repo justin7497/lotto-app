@@ -1,36 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import BallDrawPhysicsCanvas from "@/components/BallDrawPhysicsCanvas";
 import DrawGameShell from "@/components/DrawGameShell";
-import DrawSceneBall from "@/components/DrawSceneBall";
+import DrawIllustScene from "@/components/DrawIllustScene";
 import LottoBall from "@/components/LottoBall";
 import { useDrawSave } from "@/hooks/useDrawSave";
 import { buildLottoDraw, DRAW_BALL_COUNT } from "@/utils/drawGame";
 
 type DrawPhase = "idle" | "mixing" | "drawing" | "done";
 
-const MIX_MS = 2200;
+const MIX_MS = 2400;
 const DRAW_INTERVAL_MS = 1400;
-
-function useTumbleBalls(active: boolean) {
-  return useMemo(
-    () =>
-      Array.from({ length: 28 }, (_, i) => ({
-        id: i,
-        num: ((i * 7 + 3) % 45) + 1,
-        left: 8 + ((i * 37) % 78),
-        top: 6 + ((i * 23) % 58),
-        delay: (i % 6) * 0.12,
-        size: i % 3 === 0 ? 26 : i % 3 === 1 ? 22 : 20,
-      })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [active],
-  );
-}
 
 export default function BallDrawMachine() {
   const [phase, setPhase] = useState<DrawPhase>("idle");
   const [drawn, setDrawn] = useState<number[]>([]);
   const [currentBall, setCurrentBall] = useState<number | null>(null);
+  const [physicsKey, setPhysicsKey] = useState(0);
   const orderRef = useRef<number[]>([]);
   const stepRef = useRef(0);
   const timersRef = useRef<number[]>([]);
@@ -41,8 +27,6 @@ export default function BallDrawMachine() {
     "추첨 · 공뽑기",
     done,
   );
-
-  const tumbleBalls = useTumbleBalls(phase === "mixing" || phase === "drawing");
 
   const clearTimers = useCallback(() => {
     for (const id of timersRef.current) window.clearTimeout(id);
@@ -95,6 +79,7 @@ export default function BallDrawMachine() {
     reset();
     orderRef.current = buildLottoDraw();
     stepRef.current = 0;
+    setPhysicsKey((k) => k + 1);
     setPhase("mixing");
     schedule(() => drawNext(), MIX_MS);
   }, [drawNext, reset, schedule]);
@@ -111,7 +96,7 @@ export default function BallDrawMachine() {
 
   return (
     <DrawGameShell
-      eyebrow="실시간 추첨 체험"
+      eyebrow="추첨 뽑기"
       statusText={statusText}
       busy={busy}
       done={done}
@@ -125,48 +110,34 @@ export default function BallDrawMachine() {
       saveError={saveError}
       onSave={() => void handleSave()}
     >
-      <div className={`ball-draw-machine${busy ? " ball-draw-machine--active" : ""}`}>
-        <div className="ball-draw-machine__dome" aria-hidden>
-          <div className="ball-draw-machine__glass" />
-          <div className="ball-draw-machine__drum">
-            {tumbleBalls.map((b) => (
-              <span
-                key={b.id}
-                className="ball-draw-machine__float-ball"
-                style={{
-                  left: `${b.left}%`,
-                  top: `${b.top}%`,
-                  animationDelay: `${b.delay}s`,
-                }}
-              >
-                <DrawSceneBall number={b.num} scene="mini" />
-              </span>
-            ))}
-          </div>
-          <div className="ball-draw-machine__neck" />
+      <DrawIllustScene
+        src="/illustrations/illust-ball-draw.png"
+        className={`ball-draw-machine${busy ? " ball-draw-machine--active" : ""}`}
+      >
+        <div className="ball-draw-machine__drum">
+          <BallDrawPhysicsCanvas
+            active={phase !== "idle"}
+            vigorous={phase === "mixing"}
+            resetKey={physicsKey}
+          />
         </div>
-
-        <div className="ball-draw-machine__chute" aria-hidden>
+        <div className="ball-draw-machine__chute">
           <AnimatePresence mode="wait">
             {currentBall ? (
               <motion.div
                 key={currentBall}
                 className="ball-draw-machine__falling"
-                initial={{ y: -72, opacity: 0, scale: 0.5 }}
-                animate={{ y: 8, opacity: 1, scale: 1 }}
-                exit={{ y: 36, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 18 }}
+                initial={{ y: -56, opacity: 0, scale: 0.45 }}
+                animate={{ y: 2, opacity: 1, scale: 1 }}
+                exit={{ y: 20, opacity: 0, scale: 0.85 }}
+                transition={{ type: "spring", stiffness: 280, damping: 20 }}
               >
-                <LottoBall number={currentBall} size="lg" variant="gloss" dramatic />
+                <LottoBall number={currentBall} size="md" variant="gloss" dramatic />
               </motion.div>
-            ) : (
-              <div className="ball-draw-machine__chute-hole" />
-            )}
+            ) : null}
           </AnimatePresence>
         </div>
-
-        <div className="ball-draw-machine__base" aria-hidden />
-      </div>
+      </DrawIllustScene>
     </DrawGameShell>
   );
 }

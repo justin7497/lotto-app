@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2480" height="3508" viewBox="0 0 2480 3508">
+  <defs>
+    <linearGradient id="hero" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#158f80"/>
+      <stop offset="55%" stop-color="#127a6e"/>
+      <stop offset="100%" stop-color="#0d5c52"/>
+    </linearGradient>
+    <linearGradient id="pageBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f4fbf8"/>
+      <stop offset="100%" stop-color="#e3f3ee"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="2480" height="3508" fill="url(#pageBg)"/>
+  <circle cx="2200" cy="280" r="220" fill="#127a6e" opacity="0.06"/>
+  <circle cx="180" cy="3200" r="260" fill="#127a6e" opacity="0.05"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="2480" height="260" fill="url(#hero)"/>
+  <text x="120" y="120" text-anchor="start" fill="#fff" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="84" font-weight="900">소원로또</text>
+  <text x="120" y="200" text-anchor="start" fill="#dff5f0" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="42" font-weight="700">종이 슬립 없이, 스마트폰 하나로 로또까지</text>
+  <rect x="1680" y="88" width="380" height="64" rx="32" fill="#ffffff" fill-opacity="0.18" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2"/>
+  <text x="1870" y="130" text-anchor="middle" fill="#fff" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">회원가입 없이 바로 사용</text>
+
+  <!-- Photo captions -->
+  <text x="120" y="300" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="34" font-weight="800">앱 미리보기</text>
+  <text x="120" y="1540" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="34" font-weight="800">QR 슬립 · 번호 만들기 · 당첨 확인까지 한곳에서</text>
+
+  <!-- Recommend -->
+  <rect x="120" y="1560" width="2240" height="72" rx="20" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+  <text x="180" y="1610" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="26" font-weight="700">번호 고민 · 슬립 작성 · 당첨 확인을 한곳에서  |  판매점 QR 슬립 · 복권 당첨 확인 · 나만의 번호 저장</text>
+
+  <text x="120" y="1660" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="38" font-weight="800">주요 기능</text>
+  <text x="1320" y="1660" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="38" font-weight="800">이렇게 사용해요</text>
+  
+    <g transform="translate(120, 1680)">
+      <circle cx="28" cy="28" r="28" fill="#127a6e"/>
+      <text x="28" y="36" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">1</text>
+      <rect x="72" y="4" width="700" height="88" rx="16" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+      <text x="96" y="38" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="32" font-weight="800">모바일 QR 슬립지</text>
+      <text x="96" y="72" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">번호를 담아 판매점 단말기용 QR 생성 · 발급완료 확정</text>
+    </g>
+    <g transform="translate(120, 1784)">
+      <circle cx="28" cy="28" r="28" fill="#127a6e"/>
+      <text x="28" y="36" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">2</text>
+      <rect x="72" y="4" width="700" height="88" rx="16" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+      <text x="96" y="38" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="32" font-weight="800">복권 QR 당첨 확인</text>
+      <text x="96" y="72" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">구매 복권 QR 스캔으로 당첨 여부·번호 즉시 저장</text>
+    </g>
+    <g transform="translate(120, 1888)">
+      <circle cx="28" cy="28" r="28" fill="#127a6e"/>
+      <text x="28" y="36" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">3</text>
+      <rect x="72" y="4" width="700" height="88" rx="16" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+      <text x="96" y="38" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="32" font-weight="800">번호 만들기</text>
+      <text x="96" y="72" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">패턴·사주·8추천·직접 선택으로 나만의 번호 생성</text>
+    </g>
+    <g transform="translate(120, 1992)">
+      <circle cx="28" cy="28" r="28" fill="#127a6e"/>
+      <text x="28" y="36" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">4</text>
+      <rect x="72" y="4" width="700" height="88" rx="16" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+      <text x="96" y="38" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="32" font-weight="800">로또 전광판</text>
+      <text x="96" y="72" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">QR 인쇄 확정 번호만 모아 등수별 당첨 현황 확인</text>
+    </g>
+    <g transform="translate(120, 2096)">
+      <circle cx="28" cy="28" r="28" fill="#127a6e"/>
+      <text x="28" y="36" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">5</text>
+      <rect x="72" y="4" width="700" height="88" rx="16" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+      <text x="96" y="38" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="32" font-weight="800">나의 로또번호</text>
+      <text x="96" y="72" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">회차별 저장·관리 · 티켓 QR 불러오기</text>
+    </g>
+    <g transform="translate(120, 2200)">
+      <circle cx="28" cy="28" r="28" fill="#127a6e"/>
+      <text x="28" y="36" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">6</text>
+      <rect x="72" y="4" width="700" height="88" rx="16" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+      <text x="96" y="38" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="32" font-weight="800">분석 및 설정</text>
+      <text x="96" y="72" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">번호 통계·공뽑기·실수령액 계산·추첨 알림</text>
+    </g>
+  
+    <g transform="translate(1320, 1700)">
+      <rect x="0" y="0" width="56" height="56" rx="14" fill="#e8f7f4" stroke="#127a6e" stroke-width="2"/>
+      <text x="28" y="38" text-anchor="middle" fill="#127a6e" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">1</text>
+      <text x="76" y="38" text-anchor="start" fill="#163b36" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="700">번호 만들기에서 번호를 고르고 저장합니다</text>
+    </g>
+    <g transform="translate(1320, 1792)">
+      <rect x="0" y="0" width="56" height="56" rx="14" fill="#e8f7f4" stroke="#127a6e" stroke-width="2"/>
+      <text x="28" y="38" text-anchor="middle" fill="#127a6e" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">2</text>
+      <text x="76" y="38" text-anchor="start" fill="#163b36" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="700">모바일 슬립지에서 QR을 생성합니다</text>
+    </g>
+    <g transform="translate(1320, 1884)">
+      <rect x="0" y="0" width="56" height="56" rx="14" fill="#e8f7f4" stroke="#127a6e" stroke-width="2"/>
+      <text x="28" y="38" text-anchor="middle" fill="#127a6e" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">3</text>
+      <text x="76" y="38" text-anchor="start" fill="#163b36" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="700">판매점 출력 후 「발급완료」를 누릅니다</text>
+    </g>
+    <g transform="translate(1320, 1976)">
+      <rect x="0" y="0" width="56" height="56" rx="14" fill="#e8f7f4" stroke="#127a6e" stroke-width="2"/>
+      <text x="28" y="38" text-anchor="middle" fill="#127a6e" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">4</text>
+      <text x="76" y="38" text-anchor="start" fill="#163b36" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="700">QR 당첨 확인 또는 전광판에서 결과를 봅니다</text>
+    </g>
+
+  <!-- QR area -->
+  <rect x="1320" y="2080" width="1040" height="500" rx="28" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+  <text x="1840" y="2150" text-anchor="middle" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="36" font-weight="800">지금 바로 접속</text>
+  <text x="1840" y="2200" text-anchor="middle" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="26" font-weight="700">https://lotto-app-ljh.web.app</text>
+  <rect id="qr-slot" x="1560" y="2220" width="280" height="280" rx="20" fill="#e8f7f4" stroke="#127a6e" stroke-width="2" stroke-dasharray="8 8"/>
+
+  <!-- App preview label -->
+  <!-- Footer -->
+  <rect x="120" y="2620" width="2240" height="780" rx="28" fill="#fff" stroke="#dbe7e3" stroke-width="2"/>
+  <text x="180" y="2700" text-anchor="start" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="34" font-weight="800">알아두세요</text>
+  <text x="180" y="2755" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">• 만 19세 미만은 로또 구매 및 관련 서비스 이용이 제한될 수 있습니다.</text>
+  <text x="180" y="2800" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">• 소원로또는 동행복권 공식 앱이 아닌 보조 서비스입니다.</text>
+  <text x="180" y="2845" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">• QR 슬립은 단말기 전송용 보조 수단이며, 판매점·단말기 환경에 따라 사용 가능 여부가 달라질 수 있습니다.</text>
+  <text x="180" y="2890" text-anchor="start" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="24" font-weight="600">• 저장 번호·슬립지 데이터는 주로 이용자 기기에 저장됩니다.</text>
+  <text x="180" y="2980" text-anchor="start" fill="#127a6e" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="700">문의  contact@heartlinktoday.com</text>
+  <rect x="180" y="3040" width="2120" height="300" rx="24" fill="#e8f7f4"/>
+  <text x="1240" y="3120" text-anchor="middle" fill="#0d5c52" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="46" font-weight="900">소원로또와 함께, 더 편한 로또 라이프</text>
+  <text x="1240" y="3190" text-anchor="middle" fill="#4b6f69" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="30" font-weight="700">QR 슬립  ·  당첨 확인  ·  번호 관리  ·  전광판</text>
+  <text x="1240" y="3255" text-anchor="middle" fill="#127a6e" opacity="1" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="700">https://lotto-app-ljh.web.app</text>
+</svg>

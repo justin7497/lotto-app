@@ -263,14 +263,20 @@ function StoreRows({
             >
               <div className="win-store-list__head">
                 <div className="win-store-list__name-wrap">
-                  <p className="win-store-list__name">{store.name}</p>
-                  {statsLabel ? (
-                    <p className="win-store-list__stats">{statsLabel}</p>
-                  ) : null}
+                  <p className="win-store-list__name">
+                    <span className="win-store-list__name-text">{store.name}</span>
+                    {statsLabel ? (
+                      <span className="win-store-list__stats"> ({statsLabel})</span>
+                    ) : null}
+                  </p>
                 </div>
                 <span className="win-store-list__type">{store.pickType}</span>
               </div>
-              <p className="win-store-list__addr">{store.address}</p>
+              {store.address ? (
+                <p className="win-store-list__addr" title={store.address}>
+                  {store.address}
+                </p>
+              ) : null}
               {!physical ? <span className="win-store-list__online">온라인 구매</span> : null}
             </button>
             {canSelect ? (
@@ -280,7 +286,7 @@ function StoreRows({
                 aria-label={`${store.name} 지도에서 보기`}
                 onClick={() => onSelectStore(store)}
               >
-                <MapPin className="w-5 h-5" strokeWidth={2.25} aria-hidden />
+                <MapPin className="w-4 h-4" strokeWidth={2.25} aria-hidden />
               </button>
             ) : null}
           </li>
@@ -497,7 +503,6 @@ export default function WinningNumbers() {
             aria-label="이전 회차"
           >
             <ChevronLeft className="win-round-nav__arrow-icon" strokeWidth={2.5} aria-hidden />
-            <span>이전</span>
           </button>
 
           <button
@@ -520,7 +525,6 @@ export default function WinningNumbers() {
             disabled={selectedIndex <= 0}
             aria-label="다음 회차"
           >
-            <span>다음</span>
             <ChevronRight className="win-round-nav__arrow-icon" strokeWidth={2.5} aria-hidden />
           </button>
 

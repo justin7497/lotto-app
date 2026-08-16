@@ -8,6 +8,11 @@ import {
   type SlipSheetStore,
 } from "@/utils/slipDraft";
 import {
+  archivePrintDoneSheet,
+  backfillArchiveFromSlipDraft,
+  getArchivedPrintDoneSheets,
+} from "@/utils/winHistoryArchive";
+import {
   checkWinResult,
   getRoundTag,
   numberSetKey,
@@ -62,22 +67,39 @@ function collectIssuedSheets(store: SlipSheetStore | undefined): SlipSheet[] {
   return [...store.regular, ...store.fixed];
 }
 
-/** QR 슬립지에서 「발급완료」한 게임만 당첨 전광판에 반영 */
+/** QR 슬립지에서 「발급완료」한 게임만 당첨 전광판에 반영 (슬립지 삭제 후에도 보관함 유지) */
 export function collectWinHistoryGames(
   savedSets: SavedSet[],
   picks: FavoritePick[],
 ): WinHistoryGame[] {
+  backfillArchiveFromSlipDraft();
   const draft = loadSlipDraft();
   const doneSheetIds = new Set(draft.printDoneSheetIds ?? []);
-  if (doneSheetIds.size === 0) return [];
 
   const savedById = new Map(savedSets.map((row) => [row.id, row]));
   const pickById = new Map(picks.map((row) => [row.id, row]));
   const games: WinHistoryGame[] = [];
+  const seenAnchors = new Set<string>();
 
+  const sheetsToProcess: SlipSheet[] = [];
+  for (const sheet of getArchivedPrintDoneSheets()) {
+    const anchorId = sheet[0]?.id;
+    if (!anchorId || seenAnchors.has(anchorId)) continue;
+    seenAnchors.add(anchorId);
+    sheetsToProcess.push(sheet);
+  }
   for (const sheet of collectIssuedSheets(draft.issuedSheets)) {
     const anchorId = sheet[0]?.id;
-    if (!anchorId || !doneSheetIds.has(anchorId)) continue;
+    if (!anchorId || seenAnchors.has(anchorId)) continue;
+    if (!doneSheetIds.has(anchorId)) continue;
+    seenAnchors.add(anchorId);
+    sheetsToProcess.push(sheet);
+    archivePrintDoneSheet(sheet);
+  }
+
+  for (const sheet of sheetsToProcess) {
+    const anchorId = sheet[0]?.id;
+    if (!anchorId) continue;
 
     sheet.forEach((game, index) => {
       if (!game.numbers || game.numbers.length !== 6) return;

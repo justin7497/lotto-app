@@ -46,6 +46,13 @@ function buildSettingsCoreItems(assets: HomeThemeAssets): HomeSubMenuItem[] {
       desc: "티켓 QR 저장·QR 슬립지 발권",
       image: p.ticketQr,
     },
+    {
+      kind: "link",
+      href: "/bulk-ticket-import",
+      label: "티켓 일괄 등록",
+      desc: "복권 QR 사진 → 나의 번호",
+      image: p.bulkTicketQr,
+    },
   ];
 }
 
@@ -72,7 +79,7 @@ export function buildRecommendMethodItems(assets: HomeThemeAssets): HomeSubMenuI
       kind: "link",
       href: "/saju",
       label: "사주 · 행운번호",
-      desc: "생년월일 만세력",
+      desc: "나와 가족 사주 저장",
       image: p.saju,
     },
     {
@@ -149,7 +156,7 @@ export function buildSettingsGuestItems(assets: HomeThemeAssets): HomeSubMenuIte
     {
       kind: "link",
       href: "/ball-draw",
-      label: "추첨 체험",
+      label: "추첨 뽑기",
       desc: "공뽑기·돌림판·상자·플링코",
       image: p.pickNumbers,
     },
@@ -178,7 +185,7 @@ export function buildSettingsGuestItems(assets: HomeThemeAssets): HomeSubMenuIte
       kind: "link",
       href: "/notification-settings",
       label: "알림 설정",
-      desc: "추첨 푸시·이메일",
+      desc: "추첨·당첨 알림",
       image: p.notifications,
     },
     {
@@ -231,7 +238,7 @@ export function buildSettingsSignedInItems(assets: HomeThemeAssets): HomeSubMenu
     {
       kind: "link",
       href: "/ball-draw",
-      label: "추첨 체험",
+      label: "추첨 뽑기",
       desc: "공뽑기·돌림판·상자·플링코",
       image: p.pickNumbers,
     },
@@ -260,7 +267,7 @@ export function buildSettingsSignedInItems(assets: HomeThemeAssets): HomeSubMenu
       kind: "link",
       href: "/notification-settings",
       label: "알림 설정",
-      desc: "추첨 푸시·이메일",
+      desc: "추첨·당첨 알림",
       image: p.notifications,
     },
     {

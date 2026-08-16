@@ -1,0 +1,22 @@
+{
+  "name": "dhlottery_official_portrait",
+  "description": "동행복권 공식 마킹 슬립 (세로 83×190mm, A~E 위→아래)",
+  "slip_size_mm": { "width": 83, "height": 190 },
+  "warp_size_px": { "width": 830, "height": 1900 },
+  "calibration": {
+    "gridLeft": 23.2,
+    "headerHeight": 49.0,
+    "gameBlockH": 28.2,
+    "gridTopInBlock": 11.0,
+    "colPitch": 8.1,
+    "rowPitch": 3.1,
+    "markW": 2.3,
+    "markH": 2.1
+  },
+  "timing_mark": {
+    "side": "left",
+    "strip_ratio": 0.1,
+    "note": "왼쪽 검은 눈금을 기준으로 행(Y) 보정"
+  },
+  "omrchecker_note": "OMRChecker 연동 시 CropOnMarkers + 이 좌표를 setLayout으로 미세 조정"
+}

@@ -15,8 +15,11 @@ import {
   sourceLabel,
   type RoundWinGroup,
 } from "@/utils/winHistory";
+import { getUserNumberHitState } from "@/utils/savedNumbers";
 import { SLIP_SOURCES, type SlipSourceId } from "@/utils/slipSources";
 import { onPrintDoneInvalidate } from "@/utils/printDone";
+import { restoreAllSavedToWinHistory } from "@/utils/printDoneRestore";
+import { backfillArchiveFromSlipDraft } from "@/utils/winHistoryArchive";
 
 function RoundSection({
   group,
@@ -26,22 +29,6 @@ function RoundSection({
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const winningSet = group.round
-    ? new Set([
-        group.round.drwtNo1,
-        group.round.drwtNo2,
-        group.round.drwtNo3,
-        group.round.drwtNo4,
-        group.round.drwtNo5,
-        group.round.drwtNo6,
-      ])
-    : null;
-  const bonusNo = group.round?.bnusNo ?? null;
-
-  function isHitNumber(n: number): boolean {
-    if (!winningSet) return false;
-    return winningSet.has(n) || n === bonusNo;
-  }
 
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/80 overflow-hidden">
@@ -113,14 +100,16 @@ function RoundSection({
                         </div>
                         <div className="ball-row ball-row--fluid win-result-balls">
                           {g.numbers.map((n) => {
-                            const hit = group.round ? isHitNumber(n) : null;
+                            const hit = group.round
+                              ? getUserNumberHitState(n, g.numbers, group.round)
+                              : null;
                             return (
                               <LottoBall
                                 key={n}
                                 number={n}
                                 size="sm"
-                                matched={hit === null ? null : hit}
-                                isBonus={hit === true && n === bonusNo}
+                                matched={hit === null ? null : hit.matched}
+                                isBonus={hit?.isBonusHit ?? false}
                               />
                             );
                           })}
@@ -143,11 +132,34 @@ export default function WinHistoryPanel() {
   const { sets, loading: setsLoading } = useSavedSets();
   const { picks, loading: picksLoading } = useFavoritePicks();
   const [slipRefresh, setSlipRefresh] = useState(0);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
 
   useEffect(
     () => onPrintDoneInvalidate(() => setSlipRefresh((value) => value + 1)),
     [],
   );
+
+  async function handleRestoreHistory() {
+    setRestoring(true);
+    setRestoreMessage(null);
+    try {
+      const fromSlip = backfillArchiveFromSlipDraft();
+      const fromSaved = await restoreAllSavedToWinHistory(sets, picks);
+      setSlipRefresh((value) => value + 1);
+      if (fromSlip + fromSaved > 0) {
+        setRestoreMessage(
+          `슬립 ${fromSlip}건 · 저장번호 ${fromSaved}건을 전광판에 다시 반영했습니다.`,
+        );
+      } else {
+        setRestoreMessage(
+          "복구할 기록이 없습니다. 슬립지에 남아 있는 발급완료 번호만 복구할 수 있습니다.",
+        );
+      }
+    } finally {
+      setRestoring(false);
+    }
+  }
 
   const roundMap = useMemo(
     () => new Map(allRounds.map((r) => [r.drwNo, r])),
@@ -176,6 +188,17 @@ export default function WinHistoryPanel() {
           <br />
           판매점 출력 후 「발급완료」를 눌러 주세요.
         </p>
+        <button
+          type="button"
+          className="mt-5 text-base font-semibold text-[#127a6e] underline underline-offset-2 disabled:opacity-50"
+          disabled={restoring}
+          onClick={() => void handleRestoreHistory()}
+        >
+          {restoring ? "복구 중…" : "전광판 기록 복구"}
+        </button>
+        {restoreMessage ? (
+          <p className="text-sm text-gray-600 mt-3 leading-relaxed">{restoreMessage}</p>
+        ) : null}
       </div>
     );
   }

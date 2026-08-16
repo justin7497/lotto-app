@@ -12,7 +12,7 @@ const inputClass =
 export default function SignUpPage() {
   const { signUpWithEmail, isSignedIn, isLoaded } = useAuth();
   const [, setLocation] = useLocation();
-  const goBack = useGoBack("/");
+  const goBack = useGoBack();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");

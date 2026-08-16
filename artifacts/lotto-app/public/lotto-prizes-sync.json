@@ -1,7 +1,7 @@
 {
-  "updatedAt": "2026-08-07T22:17:32.834Z",
-  "latestDrwNo": 1235,
-  "fromDrwNo": 1176,
+  "updatedAt": "2026-08-15T22:41:04.408Z",
+  "latestDrwNo": 1237,
+  "fromDrwNo": 1178,
   "rounds": {
     "1175": {
       "drwNo": 1175,
@@ -2257,6 +2257,80 @@
           "winners": 2585719,
           "amount": 5000,
           "totalAmount": 12928595000
+        }
+      ]
+    },
+    "1236": {
+      "drwNo": 1236,
+      "drwNoDate": "2026-08-08",
+      "totalSales": 57035418544,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 11,
+          "amount": 2441919375,
+          "totalAmount": 26861113125
+        },
+        {
+          "rank": 2,
+          "winners": 84,
+          "amount": 53295860,
+          "totalAmount": 4476852240
+        },
+        {
+          "rank": 3,
+          "winners": 3371,
+          "amount": 1328049,
+          "totalAmount": 4476853179
+        },
+        {
+          "rank": 4,
+          "winners": 161927,
+          "amount": 50000,
+          "totalAmount": 8096350000
+        },
+        {
+          "rank": 5,
+          "winners": 2624850,
+          "amount": 5000,
+          "totalAmount": 13124250000
+        }
+      ]
+    },
+    "1237": {
+      "drwNo": 1237,
+      "drwNoDate": "2026-08-15",
+      "totalSales": 59181583190,
+      "prizes": [
+        {
+          "rank": 1,
+          "winners": 23,
+          "amount": 1214932680,
+          "totalAmount": 27943451640
+        },
+        {
+          "rank": 2,
+          "winners": 75,
+          "amount": 62096560,
+          "totalAmount": 4657242000
+        },
+        {
+          "rank": 3,
+          "winners": 3745,
+          "amount": 1243590,
+          "totalAmount": 4657244550
+        },
+        {
+          "rank": 4,
+          "winners": 172132,
+          "amount": 50000,
+          "totalAmount": 8606600000
+        },
+        {
+          "rank": 5,
+          "winners": 2663409,
+          "amount": 5000,
+          "totalAmount": 13317045000
         }
       ]
     }

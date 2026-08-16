@@ -211,8 +211,29 @@ export function getClockTimeLabel(hour: number, minute: number): string {
   return `${formatClockTime(hour, minute)} (${pillar})`;
 }
 
+export const SAJU_YEAR_MIN = 1900;
+export const SAJU_SELF_NAME = "나";
+export const SAJU_PEOPLE_MAX = 12;
+
+export function getSajuYearMax(): number {
+  return new Date().getFullYear();
+}
+
+export function sajuYearOptions(): number[] {
+  const max = getSajuYearMax();
+  return Array.from({ length: max - SAJU_YEAR_MIN + 1 }, (_, i) => max - i);
+}
+
+function clampSajuYear(year: number): number {
+  return Math.min(getSajuYearMax(), Math.max(SAJU_YEAR_MIN, Math.floor(year)));
+}
+
 function normalizeSajuInput(data: Partial<SajuInput> & { hour?: number; minute?: number }): SajuInput | null {
-  if (!data.year || !data.month || !data.day) return null;
+  const year = Number(data.year);
+  const month = Number(data.month);
+  const day = Number(data.day);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
   const rawBlood = data.bloodType ?? "A";
   const bloodType: BloodType = rawBlood === "unknown" ? "A" : rawBlood;
   let hour = typeof data.hour === "number" ? data.hour : 12;
@@ -227,7 +248,7 @@ function normalizeSajuInput(data: Partial<SajuInput> & { hour?: number; minute?:
 
   hour = Math.min(23, Math.max(0, Math.floor(hour)));
   minute = Math.min(59, Math.max(0, Math.floor(minute)));
-  return { year: data.year, month: data.month, day: data.day, hour, minute, bloodType };
+  return { year: clampSajuYear(year), month, day, hour, minute, bloodType };
 }
 
 function uniqueSorted(nums: number[]): number[] {
@@ -378,10 +399,10 @@ export function buildDailySajuContent(profile: SajuProfile, date = new Date()): 
   return {
     title: "오늘의 사주",
     overall: `${profile.dayMaster} · ${paceByDay[day]}`,
-    wealth: `금전 · ${profile.luckyPool.slice(0, 3).join(", ")}`,
-    work: `일 · ${ELEMENT_LABEL[topElement]} 강세`,
-    love: `애정 · ${profile.zodiacEastern}`,
-    health: `건강 · ${ELEMENT_LABEL[weakElement]} 보완`,
+    wealth: profile.luckyPool.slice(0, 3).join(", "),
+    work: `${ELEMENT_LABEL[topElement]} 강세`,
+    love: profile.zodiacEastern,
+    health: `${ELEMENT_LABEL[weakElement]} 보완`,
     luckyColor: colorByElement[topElement],
     luckyDirection: directionByDay[day],
   };
@@ -481,9 +502,211 @@ export const BLOOD_OPTIONS: { value: BloodType; label: string }[] = [
 ];
 
 const STORAGE_KEY = "lotto_saju_profile_v2";
+const PEOPLE_KEY = "lotto_saju_people_v1";
 const INFO_READY_KEY = "lotto_saju_info_ready_v1";
 const DAILY_KEY = "lotto_saju_daily_v1";
+const DAILY_MAP_KEY = "lotto_saju_daily_map_v1";
 const WEEKLY_KEY = "lotto_saju_weekly_v1";
+
+export interface SajuPerson extends SajuInput {
+  id: string;
+  name: string;
+  updatedAt: string;
+}
+
+export interface SajuPeopleState {
+  activeId: string;
+  people: SajuPerson[];
+}
+
+function newSajuPersonId(): string {
+  return `saju_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function trimSajuName(name: string): string {
+  const trimmed = name.replace(/\s+/g, " ").trim();
+  return trimmed.slice(0, 12) || SAJU_SELF_NAME;
+}
+
+function personFromInput(
+  input: SajuInput,
+  name = SAJU_SELF_NAME,
+  id?: string,
+  updatedAt?: string,
+): SajuPerson {
+  return {
+    id: id || newSajuPersonId(),
+    name: trimSajuName(name),
+    ...input,
+    updatedAt: updatedAt || new Date().toISOString(),
+  };
+}
+
+function readLegacySajuInput(): SajuInput | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem("lotto_saju_profile_v1");
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Partial<SajuInput>;
+    return normalizeSajuInput(data);
+  } catch {
+    return null;
+  }
+}
+
+function persistPeopleState(state: SajuPeopleState): void {
+  try {
+    localStorage.setItem(PEOPLE_KEY, JSON.stringify(state));
+    const active = state.people.find((p) => p.id === state.activeId) ?? state.people[0];
+    if (active) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          year: active.year,
+          month: active.month,
+          day: active.day,
+          hour: active.hour,
+          minute: active.minute,
+          bloodType: active.bloodType,
+          updatedAt: active.updatedAt,
+        }),
+      );
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function parseSajuPeopleState(raw: unknown): SajuPeopleState | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as { activeId?: unknown; people?: unknown };
+  if (!Array.isArray(data.people) || data.people.length === 0) return null;
+  const people: SajuPerson[] = [];
+  for (const row of data.people) {
+    if (!row || typeof row !== "object") continue;
+    const rec = row as Partial<SajuPerson>;
+    const input = normalizeSajuInput(rec);
+    if (!input) continue;
+    people.push(
+      personFromInput(
+        input,
+        typeof rec.name === "string" ? rec.name : SAJU_SELF_NAME,
+        typeof rec.id === "string" && rec.id ? rec.id : newSajuPersonId(),
+        typeof rec.updatedAt === "string" ? rec.updatedAt : undefined,
+      ),
+    );
+  }
+  if (people.length === 0) return null;
+  const activeId =
+    typeof data.activeId === "string" && people.some((p) => p.id === data.activeId)
+      ? data.activeId
+      : people[0].id;
+  return { activeId, people };
+}
+
+export function loadSajuPeopleState(): SajuPeopleState {
+  try {
+    const raw = localStorage.getItem(PEOPLE_KEY);
+    if (raw) {
+      const parsed = parseSajuPeopleState(JSON.parse(raw));
+      if (parsed) return parsed;
+    }
+  } catch {
+    /* ignore */
+  }
+  const legacy = readLegacySajuInput();
+  const first = personFromInput(
+    legacy ?? {
+      year: 1970,
+      month: 1,
+      day: 1,
+      hour: 12,
+      minute: 0,
+      bloodType: "A",
+    },
+  );
+  const state = { activeId: first.id, people: [first] };
+  if (legacy) persistPeopleState(state);
+  return state;
+}
+
+export function getActiveSajuPerson(state?: SajuPeopleState): SajuPerson {
+  const next = state ?? loadSajuPeopleState();
+  return next.people.find((p) => p.id === next.activeId) ?? next.people[0];
+}
+
+export function saveSajuPeopleState(state: SajuPeopleState): void {
+  persistPeopleState(state);
+}
+
+export function setActiveSajuPersonId(id: string): SajuPeopleState {
+  const state = loadSajuPeopleState();
+  if (!state.people.some((p) => p.id === id)) return state;
+  const next = { ...state, activeId: id };
+  persistPeopleState(next);
+  return next;
+}
+
+export function upsertActiveSajuPerson(
+  input: SajuInput,
+  name?: string,
+): SajuPeopleState {
+  const state = loadSajuPeopleState();
+  const nextPeople = state.people.map((p) =>
+    p.id === state.activeId
+      ? personFromInput(input, name ?? p.name, p.id)
+      : p,
+  );
+  const next = { ...state, people: nextPeople };
+  persistPeopleState(next);
+  return next;
+}
+
+export function addSajuPerson(name: string): SajuPeopleState {
+  const state = loadSajuPeopleState();
+  if (state.people.length >= SAJU_PEOPLE_MAX) return state;
+  const person = personFromInput(
+    { year: 1970, month: 1, day: 1, hour: 12, minute: 0, bloodType: "A" },
+    name,
+  );
+  const next = { activeId: person.id, people: [...state.people, person] };
+  persistPeopleState(next);
+  return next;
+}
+
+export function renameSajuPerson(id: string, name: string): SajuPeopleState {
+  const state = loadSajuPeopleState();
+  const next = {
+    ...state,
+    people: state.people.map((p) =>
+      p.id === id ? { ...p, name: trimSajuName(name), updatedAt: new Date().toISOString() } : p,
+    ),
+  };
+  persistPeopleState(next);
+  return next;
+}
+
+export function deleteSajuPerson(id: string): SajuPeopleState {
+  const state = loadSajuPeopleState();
+  if (state.people.length <= 1) return state;
+  const people = state.people.filter((p) => p.id !== id);
+  const activeId = people.some((p) => p.id === state.activeId) ? state.activeId : people[0].id;
+  const next = { activeId, people };
+  persistPeopleState(next);
+  return next;
+}
+
+export function replaceSajuPeopleState(state: SajuPeopleState): void {
+  persistPeopleState(state);
+}
+
+export function getSajuPeopleUpdatedAt(): string | null {
+  const state = loadSajuPeopleState();
+  let latest = "";
+  for (const p of state.people) {
+    if (p.updatedAt > latest) latest = p.updatedAt;
+  }
+  return latest || null;
+}
 
 /** 로또 회차(주간) 키 — 나의 번호 roundTag와 동일 기준 */
 export function getSajuWeekKey(): string {
@@ -503,13 +726,21 @@ export function getSajuWeekKey(): string {
 
 export function loadSajuInput(): SajuInput | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem("lotto_saju_profile_v1");
-    if (!raw) return null;
-    const data = JSON.parse(raw) as Partial<SajuInput>;
-    return normalizeSajuInput(data);
+    if (!localStorage.getItem(PEOPLE_KEY) && !localStorage.getItem(STORAGE_KEY) && !localStorage.getItem("lotto_saju_profile_v1")) {
+      return null;
+    }
   } catch {
     return null;
   }
+  const active = getActiveSajuPerson();
+  return {
+    year: active.year,
+    month: active.month,
+    day: active.day,
+    hour: active.hour,
+    minute: active.minute,
+    bloodType: active.bloodType,
+  };
 }
 
 export function isSajuInfoReady(): boolean {
@@ -529,14 +760,7 @@ export function markSajuInfoReady(): void {
 }
 
 export function saveSajuInput(input: SajuInput): void {
-  try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...input, updatedAt: new Date().toISOString() }),
-    );
-  } catch {
-    /* ignore */
-  }
+  upsertActiveSajuPerson(input);
 }
 
 export interface SajuDailyBundle {
@@ -544,6 +768,7 @@ export interface SajuDailyBundle {
   weekday: string;
   games: GeneratedNumbers[];
   input: SajuInput;
+  personId?: string;
   savedAt: string;
 }
 
@@ -555,14 +780,24 @@ export interface SajuWeeklyBundle {
   savedAt: string;
 }
 
-export function loadDailySajuGames(date = new Date()): SajuDailyBundle | null {
+export function loadDailySajuGames(date = new Date(), personId?: string): SajuDailyBundle | null {
   const dayKey = getSajuDayKey(date);
+  const id = personId ?? loadSajuPeopleState().activeId;
   try {
+    const mapRaw = localStorage.getItem(DAILY_MAP_KEY);
+    if (mapRaw) {
+      const map = JSON.parse(mapRaw) as Record<string, SajuDailyBundle>;
+      const bundle = map[id];
+      if (!bundle?.dayKey || !Array.isArray(bundle.games) || bundle.games.length === 0) return null;
+      if (bundle.dayKey !== dayKey) return null;
+      return bundle;
+    }
     const raw = localStorage.getItem(DAILY_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw) as SajuDailyBundle;
     if (!data?.dayKey || !Array.isArray(data.games) || data.games.length === 0) return null;
     if (data.dayKey !== dayKey) return null;
+    if (data.personId && data.personId !== id) return null;
     return data;
   } catch {
     return null;
@@ -573,15 +808,26 @@ export function saveDailySajuGames(
   games: GeneratedNumbers[],
   input: SajuInput,
   date = new Date(),
+  personId?: string,
 ): void {
   try {
+    const id = personId ?? loadSajuPeopleState().activeId;
     const bundle: SajuDailyBundle = {
       dayKey: getSajuDayKey(date),
       weekday: getSajuWeekdayLabel(date),
       games,
       input,
+      personId: id,
       savedAt: new Date().toISOString(),
     };
+    let map: Record<string, SajuDailyBundle> = {};
+    const mapRaw = localStorage.getItem(DAILY_MAP_KEY);
+    if (mapRaw) {
+      const parsed = JSON.parse(mapRaw) as Record<string, SajuDailyBundle>;
+      if (parsed && typeof parsed === "object") map = parsed;
+    }
+    map[id] = bundle;
+    localStorage.setItem(DAILY_MAP_KEY, JSON.stringify(map));
     localStorage.setItem(DAILY_KEY, JSON.stringify(bundle));
   } catch {
     /* ignore */
@@ -624,6 +870,7 @@ export function saveWeeklySajuGames(games: GeneratedNumbers[], input: SajuInput)
 export function clearDailySajuGames(): void {
   try {
     localStorage.removeItem(DAILY_KEY);
+    localStorage.removeItem(DAILY_MAP_KEY);
   } catch {
     /* ignore */
   }

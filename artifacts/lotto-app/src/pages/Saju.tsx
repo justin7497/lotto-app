@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, RotateCcw, RefreshCw } from "lucide-react";
+import { Sparkles, RotateCcw, RefreshCw, Plus, Trash2 } from "lucide-react";
 import LottoBall from "@/components/LottoBall";
 import PageCard from "@/components/PageCard";
 import PageGuideBar from "@/components/PageGuideBar";
@@ -8,7 +8,7 @@ import SajuGuideSheet from "@/components/SajuGuideSheet";
 import SajuProfileCard from "@/components/SajuProfileCard";
 import SazuTrustPanel from "@/components/SazuTrustPanel";
 import {
-  RecommendFooterSaveActions,
+  RecommendResultSaveActions,
   RecommendStickyFooter,
 } from "@/components/RecommendSaveActions";
 import type { GeneratedNumbers } from "@/data/types";
@@ -29,9 +29,18 @@ import {
   saveDailySajuGames,
   saveSajuInput,
   SAJU_DAILY_GAME_COUNT,
+  SAJU_PEOPLE_MAX,
+  addSajuPerson,
+  deleteSajuPerson,
+  getActiveSajuPerson,
+  loadSajuPeopleState,
+  renameSajuPerson,
+  setActiveSajuPersonId,
+  sajuYearOptions,
   buildDailySajuContent,
   type BloodType,
   type SajuInput,
+  type SajuPerson,
 } from "@/utils/sajuLucky";
 import { onSajuInputInvalidate, saveSajuProfileCloud } from "@/utils/sajuProfileCloud";
 import { autoSaveGeneratedSets } from "@/utils/autoSaveNumbers";
@@ -41,20 +50,46 @@ import { useSavedSets } from "@/hooks/useSavedSets";
 const GAME_COUNT = SAJU_DAILY_GAME_COUNT;
 type SajuTab = "numbers" | "info";
 
-function defaultInput(): SajuInput {
-  const saved = loadSajuInput();
-  if (saved) return saved;
-  return {
-    year: 1970,
-    month: 1,
-    day: 1,
-    hour: 12,
-    minute: 0,
-    bloodType: "A",
-  };
+function SajuPeopleChips({
+  people,
+  activeId,
+  onSelectPerson,
+  label = "누구의 번호인가요",
+}: {
+  people: SajuPerson[];
+  activeId: string;
+  onSelectPerson: (id: string) => void;
+  label?: string;
+}) {
+  if (people.length <= 1) return null;
+  return (
+    <div className="saju-form__section">
+      <span className="saju-form__label">{label}</span>
+      <div className="saju-people" role="list">
+        {people.map((person) => {
+          const active = person.id === activeId;
+          return (
+            <button
+              key={person.id}
+              type="button"
+              role="listitem"
+              onClick={() => onSelectPerson(person.id)}
+              className={`saju-people__btn${active ? " saju-people__btn--active" : ""}`}
+              aria-pressed={active}
+            >
+              {person.name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function SajuInfoForm({
+  people,
+  activeId,
+  personName,
   year,
   month,
   day,
@@ -66,6 +101,12 @@ function SajuInfoForm({
   birthTimeValue,
   inputSavedHint,
   isSignedIn,
+  addName,
+  onSelectPerson,
+  onPersonNameChange,
+  onAddNameChange,
+  onAddPerson,
+  onDeletePerson,
   onYearChange,
   onMonthChange,
   onDayChange,
@@ -74,6 +115,9 @@ function SajuInfoForm({
   externalLoading,
   externalStatus,
 }: {
+  people: SajuPerson[];
+  activeId: string;
+  personName: string;
   year: number;
   month: number;
   day: number;
@@ -85,6 +129,12 @@ function SajuInfoForm({
   birthTimeValue: string;
   inputSavedHint: boolean;
   isSignedIn: boolean;
+  addName: string;
+  onSelectPerson: (id: string) => void;
+  onPersonNameChange: (name: string) => void;
+  onAddNameChange: (name: string) => void;
+  onAddPerson: () => void;
+  onDeletePerson: () => void;
   onYearChange: (year: number) => void;
   onMonthChange: (month: number) => void;
   onDayChange: (day: number) => void;
@@ -96,7 +146,7 @@ function SajuInfoForm({
   return (
     <PageCard className="saju-input-card">
       <div className="saju-input-card__head">
-        <h3 className="page-section-title">내 정보 입력</h3>
+        <h3 className="page-section-title">사주 정보</h3>
         <span
           className={`text-base font-bold transition-opacity shrink-0 ${
             inputSavedHint ? "text-gray-700 opacity-100" : "text-gray-400 opacity-80"
@@ -106,8 +156,69 @@ function SajuInfoForm({
         </span>
       </div>
       <p className="saju-input-card__hint">
-        생년월일·출생 시간·혈액형으로 오늘 요일 행운번호를 추천합니다
+        나와 다른 사람의 사주를 저장해 두고, 선택한 사주로 오늘 요일 행운번호를 받습니다.
+        출생년도는 1900년부터 넣을 수 있습니다.
       </p>
+
+      <SajuPeopleChips
+        people={people}
+        activeId={activeId}
+        onSelectPerson={onSelectPerson}
+        label="누구의 사주인가요"
+      />
+
+      {people.length < SAJU_PEOPLE_MAX ? (
+        <div className="saju-form__section">
+          <span className="saju-form__label">다른 사람 추가</span>
+          <div className="saju-people__add">
+            <input
+              type="text"
+              value={addName}
+              onChange={(e) => onAddNameChange(e.target.value)}
+              placeholder="이름 (예: 배우자, 엄마)"
+              maxLength={12}
+              className="saju-form__field"
+              aria-label="추가할 이름"
+            />
+            <button
+              type="button"
+              onClick={onAddPerson}
+              disabled={!addName.trim()}
+              className="saju-people__add-btn"
+            >
+              <Plus className="w-5 h-5" aria-hidden />
+              추가
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="saju-form__section">
+        <label className="saju-form__label" htmlFor="saju-person-name">
+          이름
+        </label>
+        <div className="saju-people__name-row">
+          <input
+            id="saju-person-name"
+            type="text"
+            value={personName}
+            onChange={(e) => onPersonNameChange(e.target.value)}
+            maxLength={12}
+            className="saju-form__field"
+          />
+          {people.length > 1 ? (
+            <button
+              type="button"
+              onClick={onDeletePerson}
+              className="saju-people__delete"
+              aria-label={`${personName} 사주 삭제`}
+            >
+              <Trash2 className="w-5 h-5" aria-hidden />
+              삭제
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       <div className="saju-form__section">
         <span className="saju-form__label">생년월일</span>
@@ -207,14 +318,19 @@ function SajuInfoForm({
 
 export default function Saju() {
   const { user, isSignedIn } = useAuth();
-  const initial = defaultInput();
+  const initialPeople = loadSajuPeopleState();
+  const initialPerson = getActiveSajuPerson(initialPeople);
   const [tab, setTab] = useState<SajuTab>("numbers");
-  const [year, setYear] = useState(initial.year);
-  const [month, setMonth] = useState(initial.month);
-  const [day, setDay] = useState(initial.day);
-  const [hour, setHour] = useState(initial.hour);
-  const [minute, setMinute] = useState(initial.minute);
-  const [bloodType, setBloodType] = useState<BloodType>(initial.bloodType);
+  const [people, setPeople] = useState(initialPeople.people);
+  const [activeId, setActiveId] = useState(initialPeople.activeId);
+  const [personName, setPersonName] = useState(initialPerson.name);
+  const [addName, setAddName] = useState("");
+  const [year, setYear] = useState(initialPerson.year);
+  const [month, setMonth] = useState(initialPerson.month);
+  const [day, setDay] = useState(initialPerson.day);
+  const [hour, setHour] = useState(initialPerson.hour);
+  const [minute, setMinute] = useState(initialPerson.minute);
+  const [bloodType, setBloodType] = useState<BloodType>(initialPerson.bloodType);
   const [results, setResults] = useState<GeneratedNumbers[]>([]);
   const [profileReady, setProfileReady] = useState(false);
   const [infoReady, setInfoReady] = useState(
@@ -245,13 +361,25 @@ export default function Saju() {
 
   const birthTimeValue = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 
-  function applyInput(next: SajuInput) {
-    setYear(next.year);
-    setMonth(next.month);
-    setDay(next.day);
-    setHour(next.hour);
-    setMinute(next.minute);
-    setBloodType(next.bloodType);
+  function applyPerson(person: SajuPerson) {
+    skipAutoSaveRef.current = true;
+    setActiveId(person.id);
+    setPersonName(person.name);
+    setYear(person.year);
+    setMonth(person.month);
+    setDay(person.day);
+    setHour(person.hour);
+    setMinute(person.minute);
+    setBloodType(person.bloodType);
+    window.setTimeout(() => {
+      skipAutoSaveRef.current = false;
+    }, 0);
+  }
+
+  function applyPeopleState(state: { activeId: string; people: SajuPerson[] }) {
+    setPeople(state.people);
+    const active = state.people.find((p) => p.id === state.activeId) ?? state.people[0];
+    if (active) applyPerson(active);
   }
 
   function markInfoReady() {
@@ -264,13 +392,39 @@ export default function Saju() {
     setter(value);
   }
 
+  function handleSelectPerson(id: string) {
+    const state = setActiveSajuPersonId(id);
+    applyPeopleState(state);
+    markInfoReady();
+  }
+
+  function handleAddPerson() {
+    const name = addName.trim();
+    if (!name) return;
+    const state = addSajuPerson(name);
+    setAddName("");
+    applyPeopleState(state);
+    markInfoReady();
+    setTab("info");
+  }
+
+  function handlePersonNameChange(name: string) {
+    setPersonName(name);
+    if (!name.trim()) return;
+    const state = renameSajuPerson(activeId, name);
+    setPeople(state.people);
+    markInfoReady();
+  }
+
+  function handleDeletePerson() {
+    const state = deleteSajuPerson(activeId);
+    applyPeopleState(state);
+  }
+
   useEffect(() => {
     const reload = () => {
-      const saved = loadSajuInput();
-      if (saved) {
-        applyInput(saved);
-        markInfoReady();
-      }
+      applyPeopleState(loadSajuPeopleState());
+      if (loadSajuInput()) markInfoReady();
     };
     reload();
     return onSajuInputInvalidate(reload);
@@ -294,6 +448,8 @@ export default function Saju() {
       return;
     }
     saveSajuInput(payload);
+    const named = loadSajuPeopleState();
+    setPeople(named.people);
     if (isSignedIn && user) {
       void saveSajuProfileCloud(user.uid, payload);
     }
@@ -303,18 +459,22 @@ export default function Saju() {
   }, [input, daysInMonth, day, isSignedIn, user]);
 
   useEffect(() => {
-    const daily = loadDailySajuGames(today);
+    const daily = loadDailySajuGames(today, activeId);
     if (!daily || daily.games.length === 0) {
       setResults([]);
       setProfileReady(false);
       setSaved(false);
+      setIsDuplicate(false);
+      setSaveError(null);
       return;
     }
     setResults(daily.games);
     setProfileReady(true);
+    setSaved(false);
+    setSaveError(null);
     markInfoReady();
     void isDuplicateNumberSets(daily.games, existingSets).then(setIsDuplicate);
-  }, [existingSets, dayKey, today]);
+  }, [existingSets, dayKey, today, activeId]);
 
   const profile = useMemo(() => {
     if (!profileReady && results.length === 0) return null;
@@ -346,10 +506,7 @@ export default function Saju() {
     [today],
   );
 
-  const years = useMemo(() => {
-    const now = new Date().getFullYear();
-    return Array.from({ length: now - 1930 + 1 }, (_, i) => now - i);
-  }, []);
+  const years = useMemo(() => sajuYearOptions(), []);
 
   const hasToday = results.length === GAME_COUNT;
 
@@ -382,9 +539,23 @@ export default function Saju() {
         );
         setProfileReady(true);
         setResults(games);
-        saveDailySajuGames(games, safeInput, today);
+        saveDailySajuGames(games, safeInput, today, activeId);
         const dup = await isDuplicateNumberSets(games, existingSets);
         setIsDuplicate(dup);
+        if (!dup) {
+          const saveResult = await autoSaveGeneratedSets(
+            games,
+            `사주 · ${personName} · ${weekdayLabel}요일 행운번호 ${GAME_COUNT}게임`,
+          );
+          if (saveResult.status === "saved") {
+            setSaved(true);
+            setExistingSets((prev) => [saveResult.set, ...prev]);
+          } else if (saveResult.status === "duplicate") {
+            setIsDuplicate(true);
+          } else if (saveResult.status === "error") {
+            setSaveError(saveResult.message);
+          }
+        }
         if (isSazuConfigured()) {
           setExternalLoading(true);
           const external = await fetchSazuAnalyze(safeInput);
@@ -418,7 +589,7 @@ export default function Saju() {
     }
     const saveResult = await autoSaveGeneratedSets(
       results,
-      `사주 · ${weekdayLabel}요일 행운번호 ${GAME_COUNT}게임`,
+      `사주 · ${personName} · ${weekdayLabel}요일 행운번호 ${GAME_COUNT}게임`,
     );
     if (saveResult.status === "saved") {
       setSaved(true);
@@ -457,12 +628,15 @@ export default function Saju() {
           className={`win-page-tabs__btn${tab === "info" ? " win-page-tabs__btn--active" : ""}`}
           onClick={() => setTab("info")}
         >
-          내 정보
+          사주 정보
         </button>
       </div>
 
       {tab === "info" ? (
         <SajuInfoForm
+          people={people}
+          activeId={activeId}
+          personName={personName}
           year={year}
           month={month}
           day={day}
@@ -474,6 +648,12 @@ export default function Saju() {
           birthTimeValue={birthTimeValue}
           inputSavedHint={inputSavedHint}
           isSignedIn={isSignedIn}
+          addName={addName}
+          onSelectPerson={handleSelectPerson}
+          onPersonNameChange={handlePersonNameChange}
+          onAddNameChange={setAddName}
+          onAddPerson={handleAddPerson}
+          onDeletePerson={handleDeletePerson}
           onYearChange={(value) => handleInputChange(setYear, value)}
           onMonthChange={(value) => handleInputChange(setMonth, value)}
           onDayChange={(value) => handleInputChange(setDay, value)}
@@ -484,17 +664,33 @@ export default function Saju() {
         />
       ) : (
         <>
+          {people.length > 1 ? (
+            <PageCard className="saju-input-card">
+              <SajuPeopleChips
+                people={people}
+                activeId={activeId}
+                onSelectPerson={handleSelectPerson}
+                label="누구의 번호인가요"
+              />
+              <p className="saju-input-card__hint">
+                {hasToday
+                  ? `지금 보는 번호는 「${personName}」의 오늘 번호입니다. 다른 이름을 고르면 그 사람 번호를 받을 수 있습니다.`
+                  : `「${personName}」을 선택한 뒤 아래 버튼으로 오늘 번호를 받으세요.`}
+              </p>
+            </PageCard>
+          ) : null}
+
           {!infoReady ? (
             <p className="saju-page__notice" role="status">
-              번호를 받기 전에 <strong>내 정보</strong> 탭에서 생년월일·출생 시간·혈액형을
+              번호를 받기 전에 <strong>사주 정보</strong> 탭에서 나와 가족·지인의 생년월일·출생 시간·혈액형을
               입력해 주세요.
               <button type="button" className="saju-page__notice-btn" onClick={() => setTab("info")}>
-                내 정보 입력하러 가기
+                사주 정보 입력하러 가기
               </button>
             </p>
           ) : null}
 
-          {hasToday ? (
+          {hasToday && people.length <= 1 ? (
             <PageCard className="saju-input-card">
               <p className="text-base text-center text-muted-readable font-semibold">
                 오늘({dayTag}) 번호 · 다시 받기 시 교체
@@ -545,7 +741,12 @@ export default function Saju() {
           <AnimatePresence>
             {profile && results.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <SajuProfileCard profile={profile} periodLabel={dayTag} gameCount={results.length} />
+                <SajuProfileCard
+                  profile={profile}
+                  periodLabel={dayTag}
+                  gameCount={results.length}
+                  personName={personName}
+                />
 
                 <PageCard>
                   <div className="space-y-2">
@@ -568,22 +769,38 @@ export default function Saju() {
                       </div>
                     ))}
                   </div>
+                  <RecommendResultSaveActions
+                    className="mt-4"
+                    saved={saved}
+                    isDuplicate={isDuplicate}
+                    saveError={saveError}
+                    onSave={() => void handleSave()}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={generating || !infoReady}
+                    className="page-cta page-cta--secondary page-cta--large w-full mt-3 disabled:opacity-50"
+                  >
+                    {generating ? (
+                      <>
+                        <RotateCcw className="w-5 h-5 animate-spin" />
+                        계산 중...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        {personName} 번호 다시 받기
+                      </>
+                    )}
+                  </button>
                 </PageCard>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <RecommendStickyFooter
-            hint={results.length === 0 ? "번호 생성 후 「나의 로또번호에 저장」이 나타납니다" : undefined}
-          >
-            {results.length > 0 ? (
-              <RecommendFooterSaveActions
-                saved={saved}
-                isDuplicate={isDuplicate}
-                saveError={saveError}
-                onSave={() => void handleSave()}
-              />
-            ) : (
+          {results.length === 0 ? (
+            <RecommendStickyFooter>
               <button
                 type="button"
                 onClick={handleGenerate}
@@ -595,20 +812,15 @@ export default function Saju() {
                     <RotateCcw className="w-5 h-5 animate-spin" />
                     계산 중...
                   </>
-                ) : hasToday ? (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    오늘({weekdayLabel}) 행운번호 {GAME_COUNT}게임 다시 받기
-                  </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    오늘({weekdayLabel}) 행운번호 {GAME_COUNT}게임 받기
+                    {personName} · 오늘({weekdayLabel}) 행운번호 {GAME_COUNT}게임 받기
                   </>
                 )}
               </button>
-            )}
-          </RecommendStickyFooter>
+            </RecommendStickyFooter>
+          ) : null}
         </>
       )}
     </div>

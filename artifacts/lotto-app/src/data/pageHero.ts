@@ -43,6 +43,7 @@ function buildThemeRouteFallbacks(assets: HomeThemeAssets): Map<string, PageHero
     ["/slip/add-fixed", "고정번호", "슬립지 고정번호 QR용 번호 만들기", p.myNumbers],
     ["/winning-numbers", "당첨번호 & 당첨금", "회차별 당첨번호·당첨금·판매점", p.guideWin],
     ["/home-theme", "화면 테마", "홈·메뉴 일러스트 스타일", p.screenTheme],
+    ["/bulk-ticket-import", "티켓 일괄 등록", "복권 QR 사진 여러 장 → 나의 번호", p.bulkTicketQr],
     ["/admin", "관리자", "관리자 도구", g.settings],
     ["/character-preview", "대표 캐릭터", "복돌이 캐릭터 미리보기", assets.hero],
   ];

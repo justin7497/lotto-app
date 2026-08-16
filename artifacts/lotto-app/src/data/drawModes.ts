@@ -43,7 +43,7 @@ export const DRAW_MODE_LIST: DrawModeItem[] = [
     href: "/ball-draw/plinko",
     label: "행운의 길",
     tagline: "공이 떨어지며 결정!",
-    description: "핀을 타고 내려오는 플링코 체험",
+    description: "핀을 타고 내려오는 플링코 뽑기",
     previewImage: "/illustrations/illust-draw-plinko.png",
     previewClass: "draw-mode-settings__preview--plinko",
   },

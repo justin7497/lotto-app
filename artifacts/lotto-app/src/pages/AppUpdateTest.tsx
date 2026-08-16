@@ -7,13 +7,14 @@ import {
   getLocalBuildId,
   isUpdatePromptDismissed,
   shouldPromptForUpdate,
-  type RemoteAppVersion,
+  type AppUpdateInfo,
 } from "@/utils/appVersion";
+import { getNativeAppVersionInfo } from "@/utils/nativeAppBridge";
 
-function mockRemote(overrides: Partial<RemoteAppVersion> = {}): RemoteAppVersion {
+function mockRemote(overrides: Partial<AppUpdateInfo> = {}): AppUpdateInfo {
   return {
-    buildId: `${Date.now()}`,
-    builtAt: new Date().toISOString(),
+    id: `${Date.now()}`,
+    kind: "web",
     label: "test",
     prompt: true,
     ...overrides,
@@ -22,27 +23,28 @@ function mockRemote(overrides: Partial<RemoteAppVersion> = {}): RemoteAppVersion
 
 export default function AppUpdateTest() {
   const localBuildId = getLocalBuildId();
+  const nativeVersion = getNativeAppVersionInfo();
   const [toast, setToast] = useState<string | null>(null);
-  const [preview, setPreview] = useState<RemoteAppVersion | null>(null);
+  const [preview, setPreview] = useState<AppUpdateInfo | null>(null);
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast(`${type === "error" ? "오류" : "완료"}: ${message}`);
   };
 
-  const runScenario = (remote: RemoteAppVersion) => {
-    if (remote.buildId === localBuildId) {
+  const runScenario = (remote: AppUpdateInfo) => {
+    if (remote.kind === "web" && remote.id === localBuildId) {
       showToast("error", "로컬 buildId와 같아 업데이트 없음으로 처리됩니다.");
       return;
     }
 
     if (!shouldPromptForUpdate(remote)) {
       showToast("success", "조용한 업데이트 — 슬립이 아니면 즉시 reload 됩니다.");
-      applyAppUpdate();
+      applyAppUpdate(remote);
       return;
     }
 
-    if (isUpdatePromptDismissed(remote.buildId)) {
-      showToast("error", "이 buildId는 세션에서 '나중에'로 닫혀 팝업이 뜨지 않습니다.");
+    if (isUpdatePromptDismissed(remote.id)) {
+      showToast("error", "이 업데이트는 세션에서 '나중에'로 닫혀 팝업이 뜨지 않습니다.");
       return;
     }
 
@@ -62,6 +64,13 @@ export default function AppUpdateTest() {
       <h1 className="text-xl font-extrabold text-gray-900 mb-2">업데이트·알림 테스트</h1>
       <p className="text-sm text-gray-500 mb-6 leading-relaxed">
         로컬 buildId: <code className="text-xs">{localBuildId}</code>
+        {nativeVersion ? (
+          <>
+            <br />
+            앱 versionCode: <code className="text-xs">{nativeVersion.versionCode}</code> (
+            {nativeVersion.versionName})
+          </>
+        ) : null}
       </p>
 
       <section className="mb-6 rounded-2xl border border-gray-200 bg-white p-4">
@@ -84,10 +93,17 @@ export default function AppUpdateTest() {
           <button
             type="button"
             className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-800"
+            onClick={() => runScenario(mockRemote({ kind: "play-store", id: "android-9999", prompt: true }))}
+          >
+            Play 스토어 업데이트 (팝업)
+          </button>
+          <button
+            type="button"
+            className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-800"
             onClick={() => {
               const remote = mockRemote({ prompt: true });
-              dismissUpdatePrompt(remote.buildId);
-              showToast("success", `buildId ${remote.buildId.slice(0, 12)}… 세션 닫기 저장`);
+              dismissUpdatePrompt(remote.id);
+              showToast("success", `업데이트 ${remote.id.slice(0, 12)}… 세션 닫기 저장`);
             }}
           >
             「나중에」 세션 저장 시뮬레이션
@@ -111,12 +127,12 @@ export default function AppUpdateTest() {
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="text-xl font-extrabold text-gray-900 text-center mb-2">앱 업데이트 (미리보기)</h2>
             <p className="text-sm text-gray-600 text-center mb-6">
-              remote buildId: {preview.buildId.slice(0, 20)}…
+              update id: {preview.id.slice(0, 20)}… ({preview.kind})
             </p>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                onClick={applyAppUpdate}
+                onClick={() => applyAppUpdate(preview)}
                 className="rounded-xl bg-[#127a6e] py-3 text-white font-bold"
               >
                 지금 업데이트
@@ -124,7 +140,7 @@ export default function AppUpdateTest() {
               <button
                 type="button"
                 onClick={() => {
-                  dismissUpdatePrompt(preview.buildId);
+                  dismissUpdatePrompt(preview.id);
                   setPreview(null);
                   showToast("success", "나중에 — 이 세션에서는 다시 안 뜹니다");
                 }}

@@ -124,9 +124,10 @@ export function groupSavedGamesByEvent(sets: SavedSet[]): SavedNumberEventGroup[
     }))
     .filter((group) => group.games.length > 0)
     .sort((a, b) => {
-      const roundDiff = (parseRoundNo(b.roundTag) ?? 0) - (parseRoundNo(a.roundTag) ?? 0);
-      if (roundDiff !== 0) return roundDiff;
-      return Date.parse(b.savedAt) - Date.parse(a.savedAt);
+      // 최신 저장·발급이 맨 위 (회차는 동률일 때만)
+      const timeDiff = Date.parse(b.savedAt) - Date.parse(a.savedAt);
+      if (timeDiff !== 0) return timeDiff;
+      return (parseRoundNo(b.roundTag) ?? 0) - (parseRoundNo(a.roundTag) ?? 0);
     });
 }
 

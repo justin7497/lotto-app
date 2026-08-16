@@ -12,6 +12,7 @@ export const VIVID_POSES = {
   },
   myLotto: {
     ticketQr: `${BASE}/illust-vivid-ticket-qr.png`,
+    bulkTicketQr: `${BASE}/illust-vivid-tickets-bulk.png`,
     myWish: `${BASE}/illust-vivid-my-wish.png`,
     myNumbers: `${BASE}/illust-vivid-my-numbers.png`,
     win: `${BASE}/illust-vivid-win.png`,
@@ -49,6 +50,7 @@ export const HOME_VIVID = {
   },
   popup: {
     ticketQr: VIVID_POSES.myLotto.ticketQr,
+    bulkTicketQr: VIVID_POSES.myLotto.bulkTicketQr,
     myWish: VIVID_POSES.myLotto.myWish,
     slipQr: VIVID_POSES.myLotto.slipQr,
     myNumbers: VIVID_POSES.myLotto.myNumbers,

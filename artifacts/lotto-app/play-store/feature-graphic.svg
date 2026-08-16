@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8f7f4"/>
+      <stop offset="45%" stop-color="#d4efe8"/>
+      <stop offset="100%" stop-color="#b8e4d8"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#158f80"/>
+      <stop offset="55%" stop-color="#127a6e"/>
+      <stop offset="100%" stop-color="#0d5c52"/>
+    </linearGradient>
+    <linearGradient id="ballY" x1="30%" y1="20%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#ffe566"/>
+      <stop offset="100%" stop-color="#f5b800"/>
+    </linearGradient>
+    <linearGradient id="ballB" x1="30%" y1="20%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#7ec8ff"/>
+      <stop offset="100%" stop-color="#2f8fd4"/>
+    </linearGradient>
+    <linearGradient id="ballG" x1="30%" y1="20%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#d8f06a"/>
+      <stop offset="100%" stop-color="#8fbe2e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d5c52" flood-opacity="0.18"/>
+    </filter>
+    <filter id="phoneShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0a3d36" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="500" fill="url(#bg)"/>
+  <circle cx="120" cy="80" r="90" fill="#127a6e" opacity="0.06"/>
+  <circle cx="940" cy="420" r="120" fill="#127a6e" opacity="0.07"/>
+  <circle cx="860" cy="60" r="50" fill="#f5b800" opacity="0.08"/>
+
+  <g transform="translate(42, 52)">
+    <rect x="0" y="0" width="500" height="396" rx="28" fill="#ffffff" opacity="0.92" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="500" height="396" rx="28" fill="none" stroke="#127a6e" stroke-opacity="0.12" stroke-width="2"/>
+
+    <rect x="28" y="28" width="118" height="34" rx="17" fill="#127a6e"/>
+    <text x="87" y="50" text-anchor="middle" fill="#ffffff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="18" font-weight="800">&#49548;&#50896;&#47196;&#46500;</text>
+
+    <text x="28" y="98" fill="#0d5c52" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="28" font-weight="800">QR &#49836;&#47549; &#183; &#45817;&#52392; &#54869;&#51064; &#183; &#48264;&#54840; &#44288;&#47532;</text>
+    <text x="28" y="126" fill="#3d6d66" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="15" font-weight="600">&#54924;&#50896;&#44032;&#51077; &#50630;&#51060; &#48148;&#47196; &#49324;&#50857;&#54616;&#45716; &#47196;&#46500; &#50724;&#47536;&#50896; &#50517;</text>
+
+    <g font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" fill="#163b36">
+      <g transform="translate(28, 156)">
+        <circle cx="14" cy="14" r="14" fill="#e6f5f1"/>
+        <rect x="8" y="9" width="12" height="9" rx="2" fill="none" stroke="#127a6e" stroke-width="1.5"/>
+        <circle cx="14" cy="12" r="2.5" fill="#127a6e"/>
+        <text x="40" y="12" font-size="17" font-weight="700">&#48373;&#44428; QR &#49828;&#52884;</text>
+        <text x="40" y="32" font-size="14" fill="#4b6f69" font-weight="600">&#45817;&#52392; &#54869;&#51064; &#183; &#48264;&#54840; &#51648;&#49884; &#51200;&#51109;</text>
+      </g>
+      <g transform="translate(28, 224)">
+        <circle cx="14" cy="14" r="14" fill="#e6f5f1"/>
+        <rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="#127a6e" stroke-width="1.5"/>
+        <rect x="10" y="10" width="8" height="8" rx="1" fill="#127a6e" opacity="0.25"/>
+        <text x="40" y="12" font-size="17" font-weight="700">&#47784;&#48148;&#51068; &#49836;&#47549;&#51648; QR</text>
+        <text x="40" y="32" font-size="14" fill="#4b6f69" font-weight="600">&#54032;&#47588;&#51216; &#48156;&#44428; &#183; &#48156;&#44553;&#50756;&#47308; &#54869;&#51221;</text>
+      </g>
+      <g transform="translate(28, 292)">
+        <circle cx="14" cy="14" r="14" fill="#e6f5f1"/>
+        <path d="M10 16 L14 10 L18 16 Z" fill="#f5b800"/>
+        <circle cx="14" cy="17" r="2" fill="#127a6e"/>
+        <text x="40" y="12" font-size="17" font-weight="700">&#48264;&#54840; &#47564;&#46308;&#44592;</text>
+        <text x="40" y="32" font-size="14" fill="#4b6f69" font-weight="600">&#54056;&#53556; &#183; &#49324;&#51452; &#183; 8&#52636;&#52380; &#183; &#51649;&#51217; &#49440;&#53469;</text>
+      </g>
+      <g transform="translate(28, 360)">
+        <circle cx="14" cy="14" r="14" fill="#e6f5f1"/>
+        <rect x="8" y="10" width="3" height="8" fill="#127a6e"/>
+        <rect x="12.5" y="8" width="3" height="10" fill="#2f8fd4"/>
+        <rect x="17" y="12" width="3" height="6" fill="#8fbe2e"/>
+        <text x="40" y="12" font-size="17" font-weight="700">&#47196;&#46500; &#51204;&#44305;&#54032;</text>
+        <text x="40" y="32" font-size="14" fill="#4b6f69" font-weight="600">QR &#51064;&#49632; &#54869;&#51221; &#48264;&#54840; &#45817;&#52392; &#54788;&#54889;</text>
+      </g>
+    </g>
+  </g>
+
+  <g transform="translate(586, 44)" filter="url(#phoneShadow)">
+    <rect x="0" y="0" width="392" height="412" rx="36" fill="#1a1a1a"/>
+    <rect x="10" y="10" width="372" height="392" rx="28" fill="#f4f6f8"/>
+    <rect x="156" y="18" width="80" height="8" rx="4" fill="#d7dde2" transform="translate(10,10)"/>
+
+    <rect x="10" y="34" width="372" height="132" fill="url(#hero)"/>
+    <text x="28" y="62" fill="#ffffff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="15" font-weight="800">&#49548;&#50896;&#47196;&#46500; &#183; &#51228;1235&#54924;</text>
+    <text x="28" y="82" fill="#d9f2ee" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="11" font-weight="600">2026.08.02</text>
+
+    <g transform="translate(24, 92)">
+      <circle cx="18" cy="18" r="16" fill="url(#ballY)"/><text x="18" y="23" text-anchor="middle" font-size="12" font-weight="800" fill="#5a4300">6</text>
+      <circle cx="52" cy="18" r="16" fill="url(#ballY)"/><text x="52" y="23" text-anchor="middle" font-size="12" font-weight="800" fill="#5a4300">7</text>
+      <circle cx="86" cy="18" r="16" fill="url(#ballB)"/><text x="86" y="23" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">11</text>
+      <circle cx="120" cy="18" r="16" fill="url(#ballB)"/><text x="120" y="23" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">15</text>
+      <circle cx="154" cy="18" r="16" fill="#b8c0c8"/><text x="154" y="23" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">39</text>
+      <circle cx="188" cy="18" r="16" fill="url(#ballG)"/><text x="188" y="23" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">43</text>
+      <text x="212" y="23" fill="#fff" font-size="14" font-weight="800">+</text>
+      <circle cx="236" cy="18" r="16" fill="url(#ballB)" stroke="#fff" stroke-width="2"/><text x="236" y="23" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">20</text>
+    </g>
+
+    <rect x="24" y="146" width="158" height="28" rx="14" fill="#ffffff" fill-opacity="0.18" stroke="#ffffff" stroke-opacity="0.25"/>
+    <text x="103" y="164" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="10" font-weight="700">QR &#45817;&#52392;&#54869;&#51064;/&#51200;&#51109;</text>
+    <rect x="190" y="146" width="158" height="28" rx="14" fill="#ffffff" fill-opacity="0.12" stroke="#ffffff" stroke-opacity="0.2"/>
+    <text x="269" y="164" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="10" font-weight="700">&#45817;&#52392;&#48264;&#54840;/&#45817;&#52392;&#51216;</text>
+
+    <g transform="translate(24, 182)">
+      <rect x="0" y="0" width="168" height="96" rx="16" fill="#fff" stroke="#dbe7e3"/>
+      <rect x="8" y="8" width="152" height="52" rx="10" fill="#e8f5f1"/>
+      <text x="84" y="78" text-anchor="middle" fill="#163b36" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="12" font-weight="800">&#47784;&#48148;&#51068; &#49836;&#47549;&#51648;</text>
+
+      <rect x="180" y="0" width="168" height="96" rx="16" fill="#fff" stroke="#dbe7e3"/>
+      <rect x="188" y="8" width="152" height="52" rx="10" fill="#e8f5f1"/>
+      <text x="264" y="78" text-anchor="middle" fill="#163b36" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="12" font-weight="800">&#45208;&#51032; &#47196;&#46500;&#48264;&#54840;</text>
+
+      <rect x="0" y="108" width="168" height="96" rx="16" fill="#fff" stroke="#dbe7e3"/>
+      <rect x="8" y="116" width="152" height="52" rx="10" fill="#e8f5f1"/>
+      <text x="84" y="186" text-anchor="middle" fill="#163b36" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="12" font-weight="800">&#48264;&#54840; &#47564;&#46308;&#44592;</text>
+
+      <rect x="180" y="108" width="168" height="96" rx="16" fill="#fff" stroke="#dbe7e3"/>
+      <rect x="188" y="116" width="152" height="52" rx="10" fill="#e8f5f1"/>
+      <text x="264" y="186" text-anchor="middle" fill="#163b36" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="12" font-weight="800">&#48516;&#49437; &#48143; &#49444;&#51221;</text>
+    </g>
+
+    <circle cx="196" cy="372" r="24" fill="#127a6e"/>
+    <text x="196" y="378" text-anchor="middle" fill="#fff" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="11" font-weight="800">?</text>
+    <text x="196" y="392" text-anchor="middle" fill="#127a6e" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="9" font-weight="700">&#49324;&#50857;&#48277;</text>
+  </g>
+</svg>

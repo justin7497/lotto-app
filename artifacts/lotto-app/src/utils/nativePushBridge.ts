@@ -101,7 +101,7 @@ export function nativePushPermissionHint(): string | null {
   if (!isNativePushBridgeAvailable()) return null;
   const state = getNativePushPermissionState();
   if (state === "denied" || state === "default") {
-    return "알림이 허용되지 않았습니다. 아래 「알림 설정 열기」에서 소원로또 알림을 켜 주세요.";
+    return "알림이 허용되지 않았습니다. 아래 「기기 알림 설정 열기」를 눌러 켜 주세요.";
   }
   return null;
 }

@@ -1,4 +1,5 @@
 import type { LottoRoundDetail, LottoWinStore } from "@/data/types";
+import { fetchRoundDetailFromFirestore } from "@/utils/lottoDetailFirestore";
 
 const CACHE_KEY = "lotto_round_details_v2";
 
@@ -188,11 +189,29 @@ async function fillMissingStores(
   return { ...detail, stores1, stores2 };
 }
 
+function detailHasUsableData(detail: LottoRoundDetail | null | undefined): boolean {
+  if (!detail) return false;
+  return Boolean(detail.prizes?.length || detail.stores1?.length || detail.stores2?.length);
+}
+
 export async function fetchRoundDetail(drwNo: number): Promise<LottoRoundDetail | null> {
-  const [prizesSync, storesSync] = await Promise.all([loadPrizesSync(), loadStoresSync()]);
+  const [prizesSync, storesSync, firestoreDetail] = await Promise.all([
+    loadPrizesSync(),
+    loadStoresSync(),
+    fetchRoundDetailFromFirestore(drwNo),
+  ]);
   const prizesBundled = prizesSync?.[String(drwNo)];
   const storesBundled = storesSync?.[String(drwNo)];
   const cached = getCachedRoundDetail(drwNo);
+
+  if (detailHasUsableData(firestoreDetail)) {
+    const merged = mergeBundled(firestoreDetail!, prizesBundled, storesBundled);
+    const filled = await fillMissingStores(merged, drwNo);
+    if (filled.prizes?.length) {
+      writeCache({ ...readCache(), [drwNo]: filled });
+    }
+    return filled;
+  }
 
   if (cached?.prizes?.length) {
     const merged = mergeBundled(cached, prizesBundled, storesBundled);
@@ -211,12 +230,22 @@ export async function fetchRoundDetail(drwNo: number): Promise<LottoRoundDetail 
       signal: AbortSignal.timeout(25000),
     });
     if (!res.ok) {
-      const fallback = bundledOnly ?? cached;
+      const fallback =
+        (detailHasUsableData(firestoreDetail)
+          ? mergeBundled(firestoreDetail!, prizesBundled, storesBundled)
+          : null) ??
+        bundledOnly ??
+        cached;
       return fallback ? fillMissingStores(fallback, drwNo) : null;
     }
     const data = (await res.json()) as LottoRoundDetail;
     if (typeof data?.drwNo !== "number") {
-      const fallback = bundledOnly ?? cached;
+      const fallback =
+        (detailHasUsableData(firestoreDetail)
+          ? mergeBundled(firestoreDetail!, prizesBundled, storesBundled)
+          : null) ??
+        bundledOnly ??
+        cached;
       return fallback ? fillMissingStores(fallback, drwNo) : null;
     }
 
@@ -224,12 +253,19 @@ export async function fetchRoundDetail(drwNo: number): Promise<LottoRoundDetail 
       mergeBundled(data, prizesBundled, storesBundled),
       drwNo,
     );
-    const cache = readCache();
-    cache[drwNo] = merged;
-    writeCache(cache);
+    if (merged.prizes?.length) {
+      const cache = readCache();
+      cache[drwNo] = merged;
+      writeCache(cache);
+    }
     return merged;
   } catch {
-    const fallback = bundledOnly ?? cached;
+    const fallback =
+      (detailHasUsableData(firestoreDetail)
+        ? mergeBundled(firestoreDetail!, prizesBundled, storesBundled)
+        : null) ??
+      bundledOnly ??
+      cached;
     return fallback ? fillMissingStores(fallback, drwNo) : null;
   }
 }

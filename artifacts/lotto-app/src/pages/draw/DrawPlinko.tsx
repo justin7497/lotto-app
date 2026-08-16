@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import DrawGameShell from "@/components/DrawGameShell";
+import DrawIllustScene from "@/components/DrawIllustScene";
 import DrawSceneBall from "@/components/DrawSceneBall";
 import { useDrawSave } from "@/hooks/useDrawSave";
 import { buildLottoDraw, DRAW_BALL_COUNT } from "@/utils/drawGame";
@@ -10,32 +11,13 @@ type Phase = "idle" | "dropping" | "done";
 const DROP_MS = 1100;
 const DROP_GAP_MS = 520;
 const ROWS = 5;
-const COLS = 7;
-
-function buildPegs() {
-  const pegs: Array<{ id: string; left: number; top: number }> = [];
-  for (let row = 0; row < ROWS; row += 1) {
-    const count = row % 2 === 0 ? COLS : COLS - 1;
-    const offset = row % 2 === 0 ? 0 : 7;
-    for (let col = 0; col < count; col += 1) {
-      pegs.push({
-        id: `${row}-${col}`,
-        left: offset + (col * (100 - offset * 2)) / Math.max(count - 1, 1),
-        top: 14 + row * 14.5,
-      });
-    }
-  }
-  return pegs;
-}
-
-const PEGS = buildPegs();
 
 export default function DrawPlinko() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [drawn, setDrawn] = useState<number[]>([]);
   const [dropIndex, setDropIndex] = useState(0);
   const [ballX, setBallX] = useState(50);
-  const [ballY, setBallY] = useState(6);
+  const [ballY, setBallY] = useState(8);
   const [activeBall, setActiveBall] = useState<number | null>(null);
   const orderRef = useRef<number[]>([]);
   const stepRef = useRef(0);
@@ -73,15 +55,15 @@ export default function DrawPlinko() {
     setActiveBall(num);
     setDropIndex(step);
     let x = 50;
-    const path: Array<{ x: number; y: number }> = [{ x, y: 6 }];
+    const path: Array<{ x: number; y: number }> = [{ x, y: 8 }];
     for (let row = 0; row < ROWS; row += 1) {
       x += (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 4);
-      x = Math.min(88, Math.max(12, x));
-      path.push({ x, y: 14 + row * 14.5 });
+      x = Math.min(86, Math.max(14, x));
+      path.push({ x, y: 16 + row * 14 });
     }
     const slot = step % DRAW_BALL_COUNT;
     const slotX = 10 + slot * (80 / (DRAW_BALL_COUNT - 1));
-    path.push({ x: slotX, y: 90 });
+    path.push({ x: slotX, y: 88 });
 
     let i = 0;
     const animateStep = () => {
@@ -107,7 +89,7 @@ export default function DrawPlinko() {
     setDropIndex(0);
     stepRef.current = 0;
     setBallX(50);
-    setBallY(6);
+    setBallY(8);
     setActiveBall(null);
     resetSaveState();
     orderRef.current = buildLottoDraw();
@@ -141,44 +123,36 @@ export default function DrawPlinko() {
       saveError={saveError}
       onSave={() => void handleSave()}
     >
-      <div className="draw-plinko">
-        <div className="draw-plinko__frame" aria-hidden>
-          <div className="draw-plinko__chute" />
-          <div className="draw-plinko__board">
-            <div className="draw-plinko__board-shine" />
-            {PEGS.map((peg) => (
+      <DrawIllustScene
+        src="/illustrations/illust-draw-plinko.png"
+        className={`draw-plinko${busy ? " draw-plinko--active" : ""}`}
+      >
+        <div className="draw-plinko__playfield">
+          <AnimatePresence>
+            {activeBall ? (
+              <motion.div
+                key={`ball-${dropIndex}-${activeBall}`}
+                className="draw-plinko__ball"
+                style={{ left: `${ballX}%`, top: `${ballY}%` }}
+                initial={{ scale: 0.65 }}
+                animate={{ scale: 1 }}
+              >
+                <DrawSceneBall number={activeBall} scene="sm" />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+          <div className="draw-plinko__slots">
+            {Array.from({ length: DRAW_BALL_COUNT }, (_, i) => (
               <span
-                key={peg.id}
-                className="draw-plinko__peg"
-                style={{ left: `${peg.left}%`, top: `${peg.top}%` }}
-              />
+                key={i}
+                className={`draw-plinko__slot${activeSlot === i ? " draw-plinko__slot--active" : ""}${drawn[i] ? " draw-plinko__slot--filled" : ""}`}
+              >
+                {drawn[i] ? <DrawSceneBall number={drawn[i]} scene="mini" /> : null}
+              </span>
             ))}
-            <AnimatePresence>
-              {activeBall ? (
-                <motion.div
-                  key={`ball-${dropIndex}-${activeBall}`}
-                  className="draw-plinko__ball"
-                  style={{ left: `${ballX}%`, top: `${ballY}%` }}
-                  initial={{ scale: 0.65 }}
-                  animate={{ scale: 1 }}
-                >
-                  <DrawSceneBall number={activeBall} scene="sm" />
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-            <div className="draw-plinko__slots">
-              {Array.from({ length: DRAW_BALL_COUNT }, (_, i) => (
-                <span
-                  key={i}
-                  className={`draw-plinko__slot${activeSlot === i ? " draw-plinko__slot--active" : ""}${drawn[i] ? " draw-plinko__slot--filled" : ""}`}
-                >
-                  {drawn[i] ? <DrawSceneBall number={drawn[i]} scene="mini" /> : null}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
-      </div>
+      </DrawIllustScene>
     </DrawGameShell>
   );
 }

@@ -1,0 +1,40 @@
+---
+description: lotto-app UI 작업 시 로컬 dev 서버 + 브라우저 테스트 패널을 함께 사용
+globs: artifacts/lotto-app/**
+alwaysApply: false
+---
+
+# lotto-app 로컬 테스트
+
+UI·슬립·QR 관련 작업 시 **반드시** 로컬 서버를 띄우고 브라우저 테스트 패널로 확인한다.
+
+## 서버 시작
+
+```bash
+pnpm dev:lotto
+```
+
+- 앱: http://localhost:5173
+- API: http://localhost:8080
+- **빌드·화면 허브**: http://localhost:5173/dev/release
+
+## 브라우저 확인
+
+1. `browser_navigate`로 `/dev/release` 또는 대상 페이지 접속
+2. 변경 후 허브에서 **새로고침** 또는 해당 화면 재접속
+3. `browser_snapshot` / `browser_take_screenshot`으로 화면 검증
+4. 터미널에 `[RUNTIME_ERROR]`가 없는지 확인
+
+## 통합 빌드 (한 번에)
+
+```bash
+pnpm release:lotto              # 변경 미리보기 + 웹 빌드
+pnpm release:lotto --deploy     # + Firebase Hosting
+pnpm release:lotto --aab        # + Android AAB
+pnpm release:lotto --aab --deploy
+```
+
+## 배포 전
+
+- `/dev/release`에서 변경 파일·버전 확인
+- 로컬에서 슬립 QR 화면이 보이는지 확인한 뒤 `pnpm release:lotto --deploy`

@@ -7,10 +7,12 @@ export default function SajuProfileCard({
   profile,
   periodLabel,
   gameCount,
+  personName,
 }: {
   profile: SajuProfile;
   periodLabel: string;
   gameCount: number;
+  personName?: string;
 }) {
   const pillars = [
     [profile.pillars.year, profile.pillars.yearHanja],
@@ -22,6 +24,7 @@ export default function SajuProfileCard({
   return (
     <PageCard className="saju-profile-card">
       <h3 className="saju-profile-card__title">
+        {personName ? `${personName} · ` : ""}
         {periodLabel} · 사주팔자 · {gameCount}게임
       </h3>
 

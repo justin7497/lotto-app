@@ -161,6 +161,28 @@ async function fetchRound(drwNo) {
 }
 
 async function findLatestRound() {
+  // 캐시된 최신+1부터 순방향 확인 — 토요 API 오픈 직후에 이진 탐색보다 빠름
+  try {
+    const syncSnap = await getAdminDb().doc("appConfig/lottoSync").get();
+    const cached = Number(syncSnap.data()?.latestDrwNo) || 0;
+    if (cached >= 1) {
+      const next = await fetchRound(cached + 1);
+      if (next) {
+        let latest = next;
+        for (let n = cached + 2; n <= cached + 6; n += 1) {
+          const round = await fetchRound(n);
+          if (!round) break;
+          latest = round;
+        }
+        return latest;
+      }
+      const current = await fetchRound(cached);
+      if (current) return current;
+    }
+  } catch (error) {
+    console.warn("findLatestRound cache probe failed", error);
+  }
+
   let lo = 1100;
   let hi = 1400;
   let latest = null;
@@ -702,8 +724,8 @@ function isSaturdayDrawWindow() {
   const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
   if (weekday !== "Sat") return false;
   if (hour < 20 || hour > 23) return false;
-  // 추첨 방송 종료 직후(약 20:40)부터 동행복권 API 반영 여부를 폴링
-  if (hour === 20 && minute < 40) return false;
+  // 추첨 종료~API 반영 시작 직후(약 20:35)부터 폴링
+  if (hour === 20 && minute < 35) return false;
   return true;
 }
 
@@ -716,15 +738,100 @@ function isDetailComplete(entry) {
   return hasPrizes && hasStores;
 }
 
+async function writeLottoSyncMeta(patch) {
+  try {
+    await getAdminDb()
+      .doc("appConfig/lottoSyncMeta")
+      .set(
+        {
+          ...patch,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+  } catch (error) {
+    console.warn("lottoSyncMeta write failed", error);
+  }
+}
+
+/**
+ * 새 회차 번호가 Firestore에 있으면 알림 체인 실행.
+ * 실패해도 sync는 유지. notifiedDrwNo로 회차 단위 중복 방지 (유저/기기 로그도 이중 방어).
+ * @param {object} round
+ * @param {{ numbersJustUpdated?: boolean }} [opts]
+ */
+async function maybeRunPostDrawNotifications(round, opts = {}) {
+  const { numbersJustUpdated = false } = opts;
+  if (!round?.drwNo) return { skipped: true, reason: "no-round" };
+
+  const metaSnap = await getAdminDb().doc("appConfig/lottoSyncMeta").get();
+  const meta = metaSnap.data() ?? {};
+  const hasNotifiedField = meta.notifiedDrwNo != null && meta.notifiedDrwNo !== "";
+  const notifiedDrwNo = Number(meta.notifiedDrwNo) || 0;
+  const pendingDrwNo = Number(meta.notifyPendingDrwNo) || 0;
+
+  if (hasNotifiedField && round.drwNo <= notifiedDrwNo) {
+    return { skipped: true, reason: "already_notified", notifiedDrwNo };
+  }
+
+  // 배포 직후 첫 실행: 이미 반영된 과거 회차에 재발송하지 않음
+  // (실패 재시도 중이면 notifyPendingDrwNo가 있어 bootstrap 생략)
+  if (!hasNotifiedField && !numbersJustUpdated && pendingDrwNo !== round.drwNo) {
+    await writeLottoSyncMeta({
+      notifiedDrwNo: round.drwNo,
+      notifyPendingDrwNo: null,
+      note: "notify_bootstrap_no_send",
+    });
+    console.log(`post-draw notify bootstrap: mark ${round.drwNo}회 as notified (no send)`);
+    return { skipped: true, reason: "bootstrap" };
+  }
+
+  await writeLottoSyncMeta({ notifyPendingDrwNo: round.drwNo });
+
+  try {
+    const { runPostDrawNotifications } = await import("./lib/runPostDrawNotifications.mjs");
+    const result = await runPostDrawNotifications({
+      db: getAdminDb(),
+      auth: getAdminAuth(),
+      messaging: getAdminMessaging(),
+      round,
+      resendApiKey: resendApiKeyParam.value()?.trim() || "",
+      resendFromEmail: resendFromEmailParam.value()?.trim() || "onboarding@resend.dev",
+    });
+    await writeLottoSyncMeta({
+      notifiedDrwNo: round.drwNo,
+      notifyPendingDrwNo: null,
+      lastNotifyAt: new Date().toISOString(),
+      lastNotifyError: null,
+      lastNotifySummary: {
+        winners: result.winners?.notified ?? 0,
+        deviceWins: result.deviceWins?.notified ?? 0,
+        engagement: result.engagement?.sent ?? 0,
+      },
+    });
+    console.log(`post-draw notify ok for ${round.drwNo}회`, result);
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`post-draw notify failed for ${round.drwNo}회`, error);
+    await writeLottoSyncMeta({ lastNotifyError: message });
+    // notifyPendingDrwNo 유지 → 다음 스케줄에서 재시도
+    return { failed: true, error: message };
+  }
+}
+
 async function scheduledLottoSyncHandler() {
   if (!isSaturdayDrawWindow()) {
     console.log("scheduledLottoSync: outside Saturday draw window, skip");
     return;
   }
 
+  await writeLottoSyncMeta({ lastAttemptAt: new Date().toISOString() });
+
   const latest = await findLatestRound();
   if (!latest) {
     console.log("scheduledLottoSync: latest round not available yet");
+    await writeLottoSyncMeta({ lastError: "latest_unavailable" });
     return;
   }
 
@@ -737,36 +844,56 @@ async function scheduledLottoSyncHandler() {
   const detailRounds = detailSnap.data()?.rounds ?? {};
   const latestDetail = detailRounds[String(latest.drwNo)];
   const detailComplete = isDetailComplete(latestDetail);
+  const numbersUpdated = latest.drwNo > cachedSyncLatest;
 
-  if (latest.drwNo > cachedSyncLatest) {
+  if (numbersUpdated) {
     await refreshLottoSyncCache();
     console.log(`scheduledLottoSync: numbers updated to ${latest.drwNo}회`);
+    await writeLottoSyncMeta({
+      lastSuccessDrwNo: latest.drwNo,
+      lastSuccessAt: new Date().toISOString(),
+      lastError: null,
+    });
   }
 
-  if (latest.drwNo > cachedSyncLatest || !detailComplete) {
+  if (numbersUpdated || !detailComplete) {
     await refreshLottoDetailSyncCache();
     console.log(`scheduledLottoSync: detail refresh for ${latest.drwNo}회`);
-    return;
+  } else {
+    console.log(`scheduledLottoSync: ${latest.drwNo}회 already complete, skip refresh`);
   }
 
-  console.log(`scheduledLottoSync: ${latest.drwNo}회 already complete, skip`);
+  await maybeRunPostDrawNotifications(latest, { numbersJustUpdated: numbersUpdated });
 }
 
-/** 토요일 추첨 직후 Firestore 갱신 — 동행복권 반영 시점에 맞춰 3분 간격 폴링 */
+/**
+ * 토요 추첨 직후 — 동행복권 API 오픈 즉시 Firestore 반영.
+ * 20:35~20:59·21시 매분, 22시 2분 간격, 일요 재시도.
+ */
 exports.scheduledLottoSyncSat20 = onSchedule(
-  { schedule: "40,43,46,49,52,55,58 20 * * 6", timeZone: "Asia/Seoul", region: "asia-northeast3" },
-  scheduledLottoSyncHandler,
-);
-exports.scheduledLottoSyncSat21 = onSchedule(
   {
-    schedule: "1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,52,55,58 21 * * 6",
+    schedule: "35-59 20 * * 6",
     timeZone: "Asia/Seoul",
     region: "asia-northeast3",
   },
   scheduledLottoSyncHandler,
 );
+
+exports.scheduledLottoSyncSat21 = onSchedule(
+  {
+    schedule: "* 21 * * 6",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+  },
+  scheduledLottoSyncHandler,
+);
+
 exports.scheduledLottoSyncSat22 = onSchedule(
-  { schedule: "5,20,35,50 22 * * 6", timeZone: "Asia/Seoul", region: "asia-northeast3" },
+  {
+    schedule: "*/2 22 * * 6",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+  },
   scheduledLottoSyncHandler,
 );
 
@@ -774,5 +901,26 @@ exports.scheduledLottoSyncSun0900 = onSchedule(
   { schedule: "0 9 * * 0", timeZone: "Asia/Seoul", region: "asia-northeast3" },
   async () => {
     await refreshLottoFirestoreCaches();
+    const latest = await findLatestRound();
+    if (latest) await maybeRunPostDrawNotifications(latest);
+    await writeLottoSyncMeta({
+      lastSuccessAt: new Date().toISOString(),
+      lastError: null,
+      note: "sunday_0900_refresh",
+    });
+  },
+);
+
+exports.scheduledLottoSyncSun2100 = onSchedule(
+  { schedule: "0 21 * * 0", timeZone: "Asia/Seoul", region: "asia-northeast3" },
+  async () => {
+    await refreshLottoFirestoreCaches();
+    const latest = await findLatestRound();
+    if (latest) await maybeRunPostDrawNotifications(latest);
+    await writeLottoSyncMeta({
+      lastSuccessAt: new Date().toISOString(),
+      lastError: null,
+      note: "sunday_2100_refresh",
+    });
   },
 );

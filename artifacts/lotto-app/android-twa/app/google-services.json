@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "618940715584",
+    "project_id": "lotto-app-ljh",
+    "storage_bucket": "lotto-app-ljh.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:618940715584:android:98ca91de386661f35045a5",
+        "android_client_info": {
+          "package_name": "com.ljh.sowonlotto"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTG-ncMHPXNMvRlVDiKPHCz5PY6uMhs9A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

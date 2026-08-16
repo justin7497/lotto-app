@@ -1,6 +1,9 @@
 {
-  "buildId": "2026-08-07T22:46:22.566Z",
-  "builtAt": "2026-08-07T22:46:22.654Z",
-  "label": "2026-08-07",
-  "prompt": true
+  "buildId": "2026-08-15T22:41:32.908Z",
+  "builtAt": "2026-08-15T22:41:32.976Z",
+  "label": "2026-08-15",
+  "prompt": true,
+  "slipEncodeVersion": 5,
+  "androidVersionCode": 27,
+  "androidVersionName": "1.0.26"
 }

@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import QRCode from "qrcode";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import { ChevronLeft, ChevronRight, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { encodeGamesToMobileSlipPayload, GAMES_PER_SLIP } from "@/utils/mobileSlip";
+import { encodeGamesToMobileSlipPayload, countSlipSheets, GAMES_PER_SLIP } from "@/utils/mobileSlip";
+import { normalizeSlipGameForEncode } from "@/utils/slipPickResolve";
 import type { SlipGame, SlipSheet } from "@/utils/slipDraft";
+import { renderSlipQrDataUrl } from "@/utils/slipQrRender";
+import {
+  applyAppUpdate,
+  fetchRemoteAppVersion,
+  getLocalSlipEncodeVersion,
+  isLegacySlipPayload,
+} from "@/utils/appVersion";
 
 const PRICE_PER_GAME = 1000;
 const SWIPE_THRESHOLD_PX = 88;
@@ -38,19 +45,7 @@ function chunkSheets(games: SlipGame[]): SlipGame[][] {
 }
 
 function toEncodeGames(games: SlipGame[]) {
-  return games.map((game) => ({
-    numbers: game.numbers,
-    mode: game.mode ?? (game.numbers.length === 0 ? "A" : "M"),
-  }));
-}
-
-async function renderQrDataUrl(payload: string): Promise<string> {
-  return QRCode.toDataURL(payload, {
-    errorCorrectionLevel: "M",
-    margin: 1,
-    width: 1024,
-    color: { dark: "#000000", light: "#ffffff" },
-  });
+  return games.map((game) => normalizeSlipGameForEncode(game));
 }
 
 export default function SlipInlineQr({
@@ -60,10 +55,12 @@ export default function SlipInlineQr({
   onSheetChange,
   onDeleteSheet,
   onEditSheet,
+  onPromoteToFixed,
   printDoneSheetIds,
   onMarkPrintDone,
+  roundLabel,
 }: {
-  /** 발행된 QR 슬립지 목록 — 항목 하나에 여러 게임(예: 15게임) 포함 가능 */
+  /** 발행된 QR 슬립지 목록 — 항목 하나에 여러 게임(예: 15게임) 포함 가능 → 한 QR 연속 발행 */
   sheets?: SlipSheet[];
   /** @deprecated flat 목록 — sheets 없을 때만 사용 */
   games?: SlipGame[];
@@ -71,17 +68,21 @@ export default function SlipInlineQr({
   onSheetChange: (index: number) => void;
   onDeleteSheet?: () => void;
   onEditSheet?: () => void;
+  onPromoteToFixed?: () => void;
   printDoneSheetIds?: ReadonlySet<string>;
   onMarkPrintDone?: (sheetIndex: number) => boolean;
+  roundLabel?: string;
 }) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [issueToast, setIssueToast] = useState<{ slipIndex: number; text: string } | null>(null);
+  const [encodeStale, setEncodeStale] = useState(false);
   const slideDirectionRef = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const slipList = useMemo(() => {
+    // 5게임 초과 시트도 쪼개지 않음 — 한 QR 연속 발행
     if (sheets && sheets.length > 0) return sheets;
     if (games && games.length > 0) return [games];
     return chunkSheets(games ?? []);
@@ -91,8 +92,8 @@ export default function SlipInlineQr({
   const slipCount = slipList.length;
   const hasMultipleSlips = slipCount > 1;
   const gameCount = activeGames.length;
-  const totalPrice = gameCount * PRICE_PER_GAME;
   const isMultiGameQr = gameCount > GAMES_PER_SLIP;
+  const totalPrice = gameCount * PRICE_PER_GAME;
   const anchorId = activeGames[0]?.id;
   const isPrintDone = Boolean(anchorId && printDoneSheetIds?.has(anchorId));
   const showPrintConfirm = Boolean(onMarkPrintDone && printDoneSheetIds);
@@ -118,6 +119,21 @@ export default function SlipInlineQr({
       return "";
     }
   }, [activeGames]);
+
+  const legacyPayload = Boolean(payload && isLegacySlipPayload(payload));
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchRemoteAppVersion().then((remote) => {
+      if (cancelled || !remote) return;
+      const remoteVer =
+        typeof remote.slipEncodeVersion === "number" ? remote.slipEncodeVersion : 0;
+      setEncodeStale(remoteVer > getLocalSlipEncodeVersion());
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function changeSlip(nextIndex: number) {
     if (nextIndex === activeSheetIndex) return;
@@ -159,13 +175,37 @@ export default function SlipInlineQr({
   }
 
   useEffect(() => {
+    if (!payload || error || encodeStale || legacyPayload) return;
+    const nav = navigator as Navigator & {
+      wakeLock?: { request: (type: "screen") => Promise<{ release: () => Promise<void> }> };
+    };
+    if (!nav.wakeLock) return;
+    let released = false;
+    let sentinel: { release: () => Promise<void> } | null = null;
+    void nav.wakeLock
+      .request("screen")
+      .then((lock) => {
+        if (released) {
+          void lock.release();
+          return;
+        }
+        sentinel = lock;
+      })
+      .catch(() => {});
+    return () => {
+      released = true;
+      void sentinel?.release();
+    };
+  }, [encodeStale, error, legacyPayload, payload]);
+
+  useEffect(() => {
     if (!payload) {
       setQrDataUrl(null);
       return;
     }
     let cancelled = false;
     setError(null);
-    renderQrDataUrl(payload)
+    renderSlipQrDataUrl(payload)
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })
@@ -257,7 +297,17 @@ export default function SlipInlineQr({
             }
           >
             <div className="mobile-slip-qr__card-head">
-              {onEditSheet ? (
+              {onPromoteToFixed ? (
+                <button
+                  type="button"
+                  onClick={onPromoteToFixed}
+                  onPointerDown={stopDragPropagation}
+                  className="mobile-slip-qr__edit"
+                  aria-label="고정번호로 이동"
+                >
+                  고정
+                </button>
+              ) : onEditSheet ? (
                 <button
                   type="button"
                   onClick={onEditSheet}
@@ -270,8 +320,13 @@ export default function SlipInlineQr({
                 </button>
               ) : null}
               <div className="mobile-slip-qr__card-head-text">
-                <p className="mobile-slip-qr__sheet-count">{gameCount}게임</p>
+                <p className="mobile-slip-qr__sheet-count">
+                  {isMultiGameQr
+                    ? `${countSlipSheets(gameCount)}장 · ${gameCount}게임`
+                    : `${gameCount}게임`}
+                </p>
                 <p className="mobile-slip-qr__sheet-meta">
+                  {roundLabel ? `${roundLabel} · ` : ""}
                   총 {totalPrice.toLocaleString("ko-KR")}원
                 </p>
               </div>
@@ -291,7 +346,22 @@ export default function SlipInlineQr({
 
             {!payload || error ? (
               <p className="mobile-slip-qr__error">{error ?? "표시할 QR이 없습니다."}</p>
-        ) : qrDataUrl ? (
+            ) : encodeStale || legacyPayload ? (
+              <div className="mobile-slip-qr__stale">
+                <p className="mobile-slip-qr__stale-title">QR 형식 업데이트 필요</p>
+                <p className="mobile-slip-qr__stale-text">
+                  이전 버전 QR은 판매점에서 인쇄되지 않습니다. 업데이트하면
+                  같은 슬립이 올바른 QR로 다시 표시됩니다. 슬립을 지울 필요는 없습니다.
+                </p>
+                <button
+                  type="button"
+                  className="mobile-slip-qr__stale-btn"
+                  onClick={() => applyAppUpdate()}
+                >
+                  지금 업데이트
+                </button>
+              </div>
+            ) : qrDataUrl ? (
           <div className="mobile-slip-qr__img-wrap">
             <img
               src={qrDataUrl}
@@ -304,13 +374,6 @@ export default function SlipInlineQr({
               <div className="mobile-slip-qr__img mobile-slip-qr__img--loading" aria-hidden />
             )}
 
-            <p className="mobile-slip-qr__price">
-              <span className="mobile-slip-qr__price-label">예상 금액 (참고)</span>
-              <span className="mobile-slip-qr__price-value">
-                {totalPrice.toLocaleString("ko-KR")}원
-              </span>
-            </p>
-            <p className="mobile-slip-qr__note">※ 본 QR은 단말기 전송용 보조 수단입니다.</p>
             {isMultiGameQr ? (
               <p className="mobile-slip-qr__batch-hint">
                 한 번 스캔하면 {gameCount}게임이 연속 발행됩니다.

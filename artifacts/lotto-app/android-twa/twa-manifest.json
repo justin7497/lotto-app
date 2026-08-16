@@ -1,0 +1,43 @@
+{
+  "packageId": "com.ljh.sowonlotto",
+  "host": "lotto-app-ljh.web.app",
+  "name": "소원로또",
+  "launcherName": "소원로또",
+  "display": "standalone",
+  "themeColor": "#D4AF37",
+  "themeColorDark": "#D4AF37",
+  "navigationColor": "#1A2848",
+  "navigationColorDark": "#1A2848",
+  "navigationDividerColor": "#1A2848",
+  "navigationDividerColorDark": "#1A2848",
+  "backgroundColor": "#1A2848",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://lotto-app-ljh.web.app/icon-512.png",
+  "maskableIconUrl": "https://lotto-app-ljh.web.app/icon-512.png",
+  "monochromeIconUrl": "https://lotto-app-ljh.web.app/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "release.keystore",
+    "alias": "sowonlotto"
+  },
+  "appVersion": "1.0.4",
+  "appVersionCode": 5,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://lotto-app-ljh.web.app/site.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "fileHandlers": [],
+  "protocolHandlers": []
+}

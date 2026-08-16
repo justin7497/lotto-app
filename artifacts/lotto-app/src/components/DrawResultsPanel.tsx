@@ -13,7 +13,7 @@ export default function DrawResultsPanel({ drawn }: { drawn: number[] }) {
               key={`draw-ball-${i}`}
               number={num}
               size="sm"
-              variant="gloss"
+              variant="flat"
             />
           ) : (
             <span key={`slot-${i}`} className="ball-draw-page__empty-slot" aria-hidden />

@@ -6,7 +6,7 @@ type DrawSceneBallProps = {
   scene?: "mini" | "sm" | "chest";
 };
 
-/** 추첨 체험 게임 영역용 로또 공 (미리보기 일러스트와 동일한 gloss 공) */
+/** 추첨 뽑기 게임 영역용 로또 공 (미리보기 일러스트와 동일한 gloss 공) */
 export default function DrawSceneBall({ number, scene = "sm" }: DrawSceneBallProps) {
   return (
     <span className={`draw-scene-ball draw-scene-ball--${scene}`}>

@@ -1,0 +1,55 @@
+---
+description: 소원로또 하위 페이지(SubPage) 레이아웃·간격·헤더 중복 금지
+globs: artifacts/lotto-app/src/pages/**/*.tsx,artifacts/lotto-app/src/components/**/*.tsx
+alwaysApply: false
+---
+
+# 하위 페이지 레이아웃 (SubPage)
+
+`App.tsx`의 `/slip`·`/generator` 등 하위 라우트는 **SubPageHeader + SubPageMain** 셸을 쓴다. 새 페이지도 이 패턴을 따른다.
+
+## 구조 (고정)
+
+```
+SubPageHeader          ← 페이지 제목(h1)·일러스트 (routeTitles + pageHero)
+  page-shell           ← py-3, px-2 (헤더↔본문 간격)
+    page-content       ← space-y-4 (카드·블록 간격)
+      PageCard         ← p-4, rounded-xl
+```
+
+- 여유 있는 설정·안내 페이지: `page-content page-content--loose` (`space-y-5`)
+- 전체 화면·탭 고정(당첨번호 등): 페이지 전용 `--*` 클래스로 예외 (기존 패턴 참고)
+
+## 필수
+
+1. **제목은 헤더에만** — `SubPageHeader`가 `h1`을 렌더한다. `PageCard` 안에 동일 제목 `h2` 중복 금지.
+2. **본문 래퍼** — 최상위는 `page-content` (필요 시 `--loose`). `page-shell`은 `SubPageMain`이 이미 감쌈.
+3. **카드** — 콘텐츠 묶음은 `PageCard` (`page-card`). 카드마다 제목이 필요하면 섹션 소제목만 (`text-title` 수준).
+4. **안내 문구** — 카드 첫 줄 설명은 `page-inline-notice` 또는 `text-base text-gray-700`.
+5. **routeTitles.ts** + **pageHero.ts** (또는 homeMenuData)에 제목·일러스트 등록.
+
+## 금지
+
+- `page-shell`을 페이지 컴포넌트에서 다시 감싸기
+- 헤더 제목과 같은 문자열을 카드 `h2`로 반복
+- `page-content`와 별도 flex `gap`으로 간격 이중 정의 (하단 고정 푸터용 `padding-bottom`만 예외)
+
+## 템플릿
+
+```tsx
+export default function ExamplePage() {
+  return (
+    <div className="page-content page-content--loose">
+      <PageCard>
+        <p className="page-inline-notice">한 줄 안내 (선택)</p>
+        {/* 본문 */}
+      </PageCard>
+    </div>
+  );
+}
+```
+
+## 관련
+
+- 간격·타이포 토큰: `.cursor/rules/senior-typography.mdc`
+- CSS 주석: `index.css`의 `page-shell` / `page-content` 블록

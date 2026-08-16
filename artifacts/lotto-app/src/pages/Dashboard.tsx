@@ -3,7 +3,6 @@ import { Hash, QrCode } from "lucide-react";
 import { useLocation } from "wouter";
 import HomeCategorySheet from "@/components/HomeCategorySheet";
 import HomeMainGrid from "@/components/HomeMainGrid";
-import IllustImage from "@/components/IllustImage";
 import LottoBall from "@/components/LottoBall";
 import QrHubSheet from "@/components/QrHubSheet";
 import RecommendMethodsSheet from "@/components/RecommendMethodsSheet";
@@ -13,6 +12,7 @@ import { useLottoContext } from "@/context/LottoDataContext";
 import { settingsCategoryLabel, type HomeCategoryId } from "@/data/homeMenuData";
 import { APP_ICON_CUTOUT_SRC } from "@/data/appBrand";
 import { allThemesImagePaths } from "@/data/homeThemes";
+import { illustPublicUrl } from "@/utils/illustUrl";
 import { preloadIllustrations } from "@/utils/preloadIllustrations";
 
 function formatDrawDate(iso: string): string {
@@ -55,7 +55,7 @@ function HeroActions({
 export default function Dashboard() {
   const { latestRound, updateMsg, updateFailed } = useLottoContext();
   const { isSignedIn, isLoaded } = useAuth();
-  const { mainGrid } = useHomeTheme();
+  const { mainGrid, themeId } = useHomeTheme();
   const [, navigate] = useLocation();
   const [qrWinOpen, setQrWinOpen] = useState(false);
   const [recommendOpen, setRecommendOpen] = useState(false);
@@ -119,11 +119,13 @@ export default function Dashboard() {
           <div className="mania-hero__top">
             <div className="mania-hero__brand-row">
               <div className="mania-hero__brand-left" aria-label="소원로또">
-                <IllustImage
-                  src={APP_ICON_CUTOUT_SRC}
+                <img
+                  src={illustPublicUrl(APP_ICON_CUTOUT_SRC)}
+                  alt=""
                   className="mania-hero__app-icon"
                   loading="eager"
                   fetchPriority="high"
+                  decoding="async"
                 />
                 <div className="mania-hero__brand-info">
                   <p className="mania-hero__brand-line">

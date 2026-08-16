@@ -20,7 +20,7 @@ interface LottoBallProps {
   highlight?: boolean;
   delay?: number;
   animate?: boolean;
-  /** 추첨 체험 등 — 크기는 CSS(.draw-scene-ball)에서만 지정 */
+  /** 추첨 뽑기 등 — 크기는 CSS(.draw-scene-ball)에서만 지정 */
   cssSized?: boolean;
 }
 

@@ -1,6 +1,8 @@
 /**
  * 동행복권 판매점 단말기용 모바일 슬립지(MSG_ESLIP) 인코딩.
  *
+ * 규칙 정의: src/utils/slipEncodeRules.ts + docs/slip-qr-encoding.md
+ *
  * 실측 샘플 (로또번호 발생기 앱, 판매기 인식 확인):
  * MSG_ESLIP{10645}{(5,M:061012182327,M:101820272939,...)}{}6C|
  *
@@ -8,16 +10,28 @@
  * MSG_ESLIP{10645}{(5,...)(5,...)}{}XX|
  *
  * - 10645 : 로또 6/45 상품 코드
- * - M:     : 수동 6개 (12자리)
- * - H:     : 반자동 (고른 번호만 2자리씩, 예: 13,18 → H:1318)
- * - A:     : 자동
+ * - M:     : 수동 6개만. 숫자는 12자리 (예: M:061012182327)
+ * - H:     : 반자동. 고른 번호만 2자리씩 (예: 7,44 → H:0744). 00 패딩 금지
+ * - Q:     : 자동 (복똑방 공식 앱 실측)
+ * - A: / 반자동 M:+00 금지 (단말기 「잘못된 게임 데이터」)
  * - 번호는 오름차순, 2자리 zero-pad
  * - 끝 2자리 hex = CRC-8 (poly 0x07, init 0x00), 종료 문자 |
  */
 
+import {
+  assertTerminalSafeSlipPayload,
+  classifySlipPick,
+  decodeSlipNumberDigits,
+  encodeSlipPickToken,
+  normalizeSlipPickForEncode,
+  slipPickKindLabel,
+} from "@/utils/slipEncodeRules";
+
 export const LOTTO_PRODUCT_CODE = "10645";
 /** 실물 슬립지 1장(A~E)당 게임 수 */
 export const GAMES_PER_SLIP = 5;
+/** 단말기 QR 인코딩 규칙 버전 — 자동 Q:, 반자동 H:, 수동 M:12자리 */
+export const SLIP_ENCODE_VERSION = 5;
 
 /** 게임 수 → 실물 슬립지 장수 (5게임 단위 올림) */
 export function countSlipSheets(gameCount: number): number {
@@ -44,40 +58,9 @@ export function crc8(data: string): number {
   return crc;
 }
 
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-function validateNumbers(nums: number[]): void {
-  for (const n of nums) {
-    if (!Number.isInteger(n) || n < 1 || n > 45) {
-      throw new Error(`잘못된 번호: ${n}`);
-    }
-  }
-  if (new Set(nums).size !== nums.length) {
-    throw new Error("번호가 중복되었습니다.");
-  }
-}
-
 function encodeGame(game: SlipGame): string {
-  const nums = [...game.numbers].sort((a, b) => a - b);
-  const mode = game.mode ?? (nums.length === 0 ? "A" : "M");
-
-  if (mode === "A" || nums.length === 0) {
-    return "A:";
-  }
-
-  if (nums.length === 6) {
-    validateNumbers(nums);
-    return `M:${nums.map(pad2).join("")}`;
-  }
-
-  if (nums.length >= 1 && nums.length <= 5) {
-    validateNumbers(nums);
-    return `H:${nums.map(pad2).join("")}`;
-  }
-
-  throw new Error("수동·반자동은 번호 1~6개여야 합니다.");
+  const normalized = normalizeSlipPickForEncode(game);
+  return encodeSlipPickToken(normalized.kind, normalized.numbers);
 }
 
 function encodeSlipBlock(games: SlipGame[]): string {
@@ -89,24 +72,21 @@ function encodeSlipBlock(games: SlipGame[]): string {
   return `(${games.length},${encoded})`;
 }
 
-function parseGamesRaw(gamesRaw: string): SlipGame[] {
+function parseGamesRaw(gamesRaw: string): SlipGame[] | null {
   const games: SlipGame[] = [];
   const parts = gamesRaw.split(",").filter(Boolean);
   for (const part of parts) {
-    const gm = part.match(/^([MAH]):(\d*)$/);
-    if (!gm) throw new Error("잘못된 게임 데이터");
+    const gm = part.match(/^([MAHQ]):(\d*)$/);
+    if (!gm) return null;
     const pick = gm[1];
     const digits = gm[2];
-    if (pick === "A") {
+    if (pick === "A" || pick === "Q") {
       games.push({ numbers: [], mode: "A" });
       continue;
     }
-    if (digits.length === 0 || digits.length % 2 !== 0 || digits.length > 12) {
-      throw new Error("잘못된 게임 데이터");
-    }
-    const numbers: number[] = [];
-    for (let i = 0; i < digits.length; i += 2) {
-      numbers.push(parseInt(digits.slice(i, i + 2), 10));
+    const numbers = decodeSlipNumberDigits(digits);
+    if (pick === "H" || pick === "M") {
+      if (numbers.length === 0) return null;
     }
     games.push({ numbers, mode: "M" });
   }
@@ -143,10 +123,16 @@ export function numberSetsToGames(
 export function encodeMobileSlip(games: SlipGame[], productCode = LOTTO_PRODUCT_CODE): string {
   const body = buildSlipBody(games, productCode);
   const sum = crc8(body).toString(16).toUpperCase().padStart(2, "0");
-  return `${body}${sum}|`;
+  const payload = `${body}${sum}|`;
+  assertTerminalSafeSlipPayload(payload);
+  return payload;
 }
 
-/** SlipGame[] → 단말기 QR 페이로드 (5게임 초과 시 블록 연결) */
+/**
+ * SlipGame[] → 단말기 QR 페이로드.
+ * 5게임 이하면 1블록, 초과면 (5,...)(5,...) 연속 발행(한 QR).
+ * ⚠️ 불변 규칙 — `.cursor/rules/slip-continuous-qr.mdc`
+ */
 export function encodeGamesToMobileSlipPayload(
   games: SlipGame[],
   productCode = LOTTO_PRODUCT_CODE,
@@ -162,7 +148,9 @@ export function encodeGamesToMobileSlipPayload(
 export function encodeMobileSlipPayload(games: SlipGame[]): string {
   const body = buildMultiSlipBody(games);
   const sum = crc8(body).toString(16).toUpperCase().padStart(2, "0");
-  return `${body}${sum}|`;
+  const payload = `${body}${sum}|`;
+  assertTerminalSafeSlipPayload(payload);
+  return payload;
 }
 
 function isNumberMatrix(value: SlipGame[] | number[][]): value is number[][] {
@@ -187,9 +175,7 @@ export function encodeMobileSlips(
 }
 
 export function slipGameLabel(game: SlipGame): string {
-  if (game.mode === "A" || game.numbers.length === 0) return "자동";
-  if (game.numbers.length < 6) return "반자동";
-  return "수동";
+  return slipPickKindLabel(classifySlipPick(game));
 }
 
 /** 페이로드 파싱 (검증·디버그용) */
@@ -199,27 +185,31 @@ export function parseMobileSlip(payload: string): {
   slipCount: number;
   checksumOk: boolean;
 } | null {
-  const m = payload.match(
-    /^MSG_ESLIP\{(\d+)\}\{((?:\(\d+,(?:[MAH]:\d{0,12},?)*\))+)\}\{\}([0-9A-Fa-f]{2})?\|?$/,
-  );
-  if (!m) return null;
-  const [, productCode, blocksRaw, checksum] = m;
-  const body = checksum ? payload.slice(0, -3) : payload.replace(/\|?$/, "");
-  const checksumOk = checksum
-    ? crc8(body).toString(16).toUpperCase().padStart(2, "0") === checksum.toUpperCase()
-    : false;
+  try {
+    const m = payload.match(
+      /^MSG_ESLIP\{(\d+)\}\{((?:\(\d+,(?:[MAHQ]:\d{0,12},?)*\))+)\}\{\}([0-9A-Fa-f]{2})?\|?$/,
+    );
+    if (!m) return null;
+    const [, productCode, blocksRaw, checksum] = m;
+    const body = checksum ? payload.slice(0, -3) : payload.replace(/\|?$/, "");
+    const checksumOk = checksum
+      ? crc8(body).toString(16).toUpperCase().padStart(2, "0") === checksum.toUpperCase()
+      : false;
 
-  const games: SlipGame[] = [];
-  let slipCount = 0;
-  const blockRe = /\((\d+),((?:[MAH]:\d{0,12},?)*)\)/g;
-  let block: RegExpExecArray | null;
-  while ((block = blockRe.exec(blocksRaw)) !== null) {
-    slipCount += 1;
-    const count = Number(block[1]);
-    const parsed = parseGamesRaw(block[2]);
-    if (parsed.length !== count) return null;
-    games.push(...parsed);
+    const games: SlipGame[] = [];
+    let slipCount = 0;
+    const blockRe = /\((\d+),((?:[MAHQ]:\d{0,12},?)*)\)/g;
+    let block: RegExpExecArray | null;
+    while ((block = blockRe.exec(blocksRaw)) !== null) {
+      slipCount += 1;
+      const count = Number(block[1]);
+      const parsed = parseGamesRaw(block[2]);
+      if (!parsed || parsed.length !== count) return null;
+      games.push(...parsed);
+    }
+    if (slipCount === 0) return null;
+    return { productCode, games, slipCount, checksumOk };
+  } catch {
+    return null;
   }
-  if (slipCount === 0) return null;
-  return { productCode, games, slipCount, checksumOk };
 }

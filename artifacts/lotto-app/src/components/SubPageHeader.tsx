@@ -19,20 +19,7 @@ const defaultSlipHeaderState: SlipHeaderState = {
 export default function SubPageHeader() {
   const [location] = useLocation();
   const pathname = location.split("?")[0];
-  const search = typeof window !== "undefined" ? window.location.search : "";
-  const loadNumbersBackTab =
-    new URLSearchParams(search).get("tab") === "fixed" ? "fixed" : "regular";
-  const goBack = useGoBack(
-    pathname === "/slip/load-numbers"
-      ? `/slip?tab=${loadNumbersBackTab}`
-      : pathname === "/slip/load-fixed"
-        ? "/slip?tab=fixed"
-        : pathname === "/slip/add-fixed"
-          ? "/slip?tab=fixed"
-          : pathname.startsWith("/ball-draw/")
-            ? "/ball-draw"
-            : "/",
-  );
+  const goBack = useGoBack();
   const [slipHeader, setSlipHeader] = useState<SlipHeaderState>(defaultSlipHeaderState);
   const [title, setTitle] = useState(() =>
     titleForRoute(location, typeof window !== "undefined" ? window.location.search : ""),

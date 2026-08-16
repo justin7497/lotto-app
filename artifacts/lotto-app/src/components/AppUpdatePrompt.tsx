@@ -5,21 +5,21 @@ import { useLocation } from "wouter";
 import { useOverlayBack } from "@/hooks/useOverlayBack";
 import {
   applyAppUpdate,
-  checkAppUpdateAvailable,
+  checkForAppUpdate,
   dismissUpdatePrompt,
   isSlipRoute,
   isUpdatePromptDismissed,
   shouldPromptForUpdate,
-  type RemoteAppVersion,
+  type AppUpdateInfo,
 } from "@/utils/appVersion";
 
 export default function AppUpdatePrompt() {
   const [location] = useLocation();
   const pathname = location.split("?")[0];
-  const [update, setUpdate] = useState<RemoteAppVersion | null>(null);
-  const pendingSilentRef = useRef<RemoteAppVersion | null>(null);
+  const [update, setUpdate] = useState<AppUpdateInfo | null>(null);
+  const pendingSilentRef = useRef<AppUpdateInfo | null>(null);
   const dismiss = useOverlayBack(Boolean(update), () => {
-    if (update) dismissUpdatePrompt(update.buildId);
+    if (update) dismissUpdatePrompt(update.id);
     setUpdate(null);
   });
 
@@ -27,7 +27,7 @@ export default function AppUpdatePrompt() {
     let cancelled = false;
 
     async function runCheck() {
-      const remote = await checkAppUpdateAvailable();
+      const remote = await checkForAppUpdate();
       if (cancelled || !remote) return;
 
       if (!shouldPromptForUpdate(remote)) {
@@ -35,24 +35,33 @@ export default function AppUpdatePrompt() {
           pendingSilentRef.current = remote;
           return;
         }
-        applyAppUpdate();
+        applyAppUpdate(remote);
         return;
       }
 
-      if (isUpdatePromptDismissed(remote.buildId)) return;
+      if (isUpdatePromptDismissed(remote.id)) return;
       setUpdate(remote);
     }
 
     void runCheck();
+    const retryTimer = window.setTimeout(() => {
+      if (!cancelled) void runCheck();
+    }, 1200);
 
     const onVisible = () => {
       if (document.visibilityState === "visible") void runCheck();
     };
+    const onNativePlayUpdate = () => {
+      void runCheck();
+    };
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("sowon-play-update-available", onNativePlayUpdate);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(retryTimer);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("sowon-play-update-available", onNativePlayUpdate);
     };
   }, [pathname]);
 
@@ -60,11 +69,12 @@ export default function AppUpdatePrompt() {
     const pending = pendingSilentRef.current;
     if (!pending || isSlipRoute(pathname)) return;
     pendingSilentRef.current = null;
-    applyAppUpdate();
+    applyAppUpdate(pending);
   }, [pathname]);
 
   if (!update) return null;
 
+  const isPlayStore = update.kind === "play-store";
   const portalRoot = document.getElementById("app-frame") ?? document.body;
 
   return createPortal(
@@ -79,20 +89,31 @@ export default function AppUpdatePrompt() {
           <Sparkles className="h-7 w-7" strokeWidth={2} aria-hidden />
         </div>
         <h2 id="app-update-title" className="text-xl font-extrabold text-gray-900 text-center mb-2">
-          앱 업데이트
+          {isPlayStore ? "새 버전 업데이트" : "앱 업데이트"}
         </h2>
         <p className="text-base text-gray-600 text-center leading-relaxed mb-6">
-          새로운 기능과 개선 사항이 있습니다.
-          <br />
-          업데이트 후 이용해 주세요.
+          {isPlayStore ? (
+            <>
+              Play 스토어에 새 버전
+              {update.versionName ? ` (${update.versionName})` : ""}이 올라왔습니다.
+              <br />
+              업데이트 후 이용해 주세요.
+            </>
+          ) : (
+            <>
+              새로운 기능과 개선 사항이 있습니다.
+              <br />
+              업데이트 후 이용해 주세요.
+            </>
+          )}
         </p>
         <div className="flex flex-col gap-2.5">
           <button
             type="button"
-            onClick={applyAppUpdate}
+            onClick={() => applyAppUpdate(update)}
             className="w-full rounded-xl bg-[#127a6e] text-white text-lg font-bold py-4 hover:bg-[#0f665c]"
           >
-            지금 업데이트
+            {isPlayStore ? "지금 업데이트" : "지금 업데이트"}
           </button>
           <button
             type="button"

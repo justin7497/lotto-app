@@ -66,6 +66,25 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/api/dev/release-preview") {
+      const { collectGitChangeSummary } = await import("./lib/gitChangeSummary.mjs");
+      const { formatVersionSummary, readAppVersionJson } = await import("./lib/lottoVersion.mjs");
+      const versions = formatVersionSummary();
+      const deployed = readAppVersionJson();
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        versions: {
+          webBuildId: versions.webBuildId,
+          androidVersionName: versions.androidVersionName,
+          androidVersionCode: versions.androidVersionCode,
+          deployedBuildId: deployed?.buildId ?? null,
+          deployedAt: deployed?.builtAt ?? null,
+        },
+        git: collectGitChangeSummary(),
+      });
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/api/saved-numbers") {
       sendJson(res, 200, Array.from(savedNumbers.values()));
       return;

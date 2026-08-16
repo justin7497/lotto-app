@@ -65,6 +65,36 @@ export interface WinResult {
   label: string;
 }
 
+export interface UserNumberHitState {
+  matched: boolean;
+  isBonusHit: boolean;
+}
+
+/** 사용자 번호 1개의 일치 여부 — 보너스는 2등(5개+보너스)일 때만 일치 처리 */
+export function getUserNumberHitState(
+  number: number,
+  numbers: number[],
+  round: LottoRound,
+): UserNumberHitState {
+  const winning = [
+    round.drwtNo1,
+    round.drwtNo2,
+    round.drwtNo3,
+    round.drwtNo4,
+    round.drwtNo5,
+    round.drwtNo6,
+  ];
+  const matchCount = numbers.filter((n) => winning.includes(n)).length;
+
+  if (winning.includes(number)) {
+    return { matched: true, isBonusHit: false };
+  }
+  if (number === round.bnusNo && matchCount === 5) {
+    return { matched: true, isBonusHit: true };
+  }
+  return { matched: false, isBonusHit: false };
+}
+
 function getCurrentUserId(): string | null {
   const direct = getAuthUserId();
   if (direct) return direct;
@@ -79,6 +109,10 @@ function getCurrentUserId(): string | null {
 function savedSetsCollection(uid: string) {
   if (!db) throw new Error("Firestore is not configured");
   return collection(db, "users", uid, "savedNumbers");
+}
+
+export function getCurrentPurchaseRoundNo(): number {
+  return getNextRoundInfo().roundNo;
 }
 
 function getNextRoundInfo(): { roundNo: number; drawDate: string } {

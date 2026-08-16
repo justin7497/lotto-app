@@ -83,7 +83,7 @@ export default function SajuGuideSheet({ open, onClose }: SajuGuideSheetProps) {
             <h4 className="text-lg font-extrabold text-gray-900 mb-2">3. 이용 방법 및 특징</h4>
             <ul className="text-base text-gray-700 leading-relaxed space-y-2">
               <li>
-                <strong className="text-gray-800">내 정보 입력:</strong> 생년월일·시진·혈액형을 입력하면 다시 열어도 그대로 불러옵니다.
+                <strong className="text-gray-800">사주 정보 입력:</strong> 나와 가족·지인의 생년월일·시진·혈액형을 각각 저장해 두고, 선택한 사주로 행운번호를 받습니다. 출생년도는 1900년부터 넣을 수 있습니다.
               </li>
               <li>
                 <strong className="text-gray-800">오늘 {GAME_COUNT}게임:</strong> 매일 「오늘 행운번호 {GAME_COUNT}게임 받기」로 번호를 받을 수 있으며, 오늘 받은 번호는 앱을 닫았다 열어도 유지됩니다. 날짜가 바뀌면 새로 받을 수 있습니다.

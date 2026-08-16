@@ -12,6 +12,7 @@ export const CHARACTER_POSES = {
     myNumbers: "/illustrations/illust-pose-family-my-numbers.png",
     signUp: "/illustrations/illust-pose-family-signup.png",
     save: "/illustrations/illust-pose-family-save.png",
+    bulkTicketQr: "/illustrations/illust-pose-family-tickets-bulk.png",
   },
   haengi: {
     recommend: "/illustrations/illust-pose-haengi-recommend.png",
@@ -49,6 +50,7 @@ export const HOME_CHARACTER = {
   },
   popup: {
     ticketQr: CHARACTER_POSES.bokdori.ticketQr,
+    bulkTicketQr: CHARACTER_POSES.family.bulkTicketQr,
     myWish: CHARACTER_POSES.bokhak.wish,
     slipQr: CHARACTER_POSES.bokdori.slipQr,
     myNumbers: CHARACTER_POSES.family.myNumbers,

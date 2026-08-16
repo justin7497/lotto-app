@@ -10,7 +10,7 @@ import NumberPickModal, {
 import SlipBallRow from "@/components/SlipBallRow";
 import SlipEmptyState from "@/components/SlipEmptyState";
 import SlipGamesAccordion from "@/components/SlipGamesAccordion";
-import SlipInlineQr from "@/components/SlipInlineQr";
+import SlipRoundQrSections from "@/components/SlipRoundQrSections";
 import SlipPromoteToFixedDialog from "@/components/SlipPromoteToFixedDialog";
 import { ConfirmActionButton, DeleteIconButton } from "@/components/DeleteConfirmDialog";
 import { GAMES_PER_SLIP } from "@/utils/mobileSlip";
@@ -25,8 +25,6 @@ import {
   subscribeSlipHeaderAction,
 } from "@/utils/slipPageBridge";
 import {
-  countIssuedGamesForCategory,
-  countIssuedSheetsForCategory,
   emptySlipSheetStore,
   filterSlipGamesByCategory,
   flattenIssuedSheets,
@@ -41,6 +39,30 @@ import {
 import { onPrintDoneInvalidate, notifyPrintDoneInvalidate } from "@/utils/printDone";
 import { syncIssuedTicketSheet } from "@/utils/deviceIssuedTickets";
 import { syncPrintDoneFromSlipSheet } from "@/utils/printDoneSync";
+import { archivePrintDoneSheet } from "@/utils/winHistoryArchive";
+import { resolveSlipPickForEncode } from "@/utils/slipPickResolve";
+import { getCurrentPurchaseRoundNo } from "@/utils/savedNumbers";
+import {
+  countGamesInSheets,
+  filterSheetsForVisibleRounds,
+  groupVisibleSheetsByRound,
+  stampSlipSheetRound,
+} from "@/utils/slipRound";
+
+function findSheetIndexInCategory(
+  store: SlipSheetStore,
+  category: SlipNumberTab,
+  anchorId: string | null,
+): number {
+  if (!anchorId) return -1;
+  return getIssuedSheetsForCategory(store, category).findIndex(
+    (sheet) => sheet[0]?.id === anchorId,
+  );
+}
+
+function pickDefaultAnchorId(sheets: SlipGame[][]): string | null {
+  return sheets[sheets.length - 1]?.[0]?.id ?? null;
+}
 
 const SLOT_LABELS = ["A", "B", "C", "D", "E"] as const;
 const ALL_NUMBERS = Array.from({ length: 45 }, (_, i) => i + 1);
@@ -154,15 +176,23 @@ export default function Slip() {
     [],
   );
   const initialRegularIssued = useMemo(
-    () => countIssuedSheetsForCategory(initialIssued, "regular"),
+    () =>
+      filterSheetsForVisibleRounds(
+        initialIssued.regular,
+        getCurrentPurchaseRoundNo(),
+      ).length,
     [initialIssued],
   );
   const initialFixedIssued = useMemo(
-    () => countIssuedSheetsForCategory(initialIssued, "fixed"),
+    () =>
+      filterSheetsForVisibleRounds(initialIssued.fixed, getCurrentPurchaseRoundNo()).length,
     [initialIssued],
   );
 
+  const currentRound = useMemo(() => getCurrentPurchaseRoundNo(), []);
+
   const [selected, setSelected] = useState<Set<number>>(emptySelection);
+  const [manualPicked, setManualPicked] = useState<Set<number>>(emptySelection);
   const [autoSemi, setAutoSemi] = useState(false);
   const [issuedSheets, setIssuedSheets] = useState<SlipSheetStore>(() => initialIssued);
   const [workingRegular, setWorkingRegular] = useState<SlipGame[]>([]);
@@ -178,7 +208,13 @@ export default function Slip() {
     resolveInitialView(initialTab, initialRegularIssued, initialFixedIssued),
   );
   const [editingGameId, setEditingGameId] = useState<string | null>(null);
-  const [activeSheetIndex, setActiveSheetIndex] = useState(0);
+  const [activeAnchorId, setActiveAnchorId] = useState<string | null>(() => {
+    const sheets = filterSheetsForVisibleRounds(
+      getIssuedSheetsForCategory(initialIssued, initialTab),
+      getCurrentPurchaseRoundNo(),
+    );
+    return pickDefaultAnchorId(sheets);
+  });
   const [gamesOpen, setGamesOpen] = useState(false);
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
   const [fixedNums, setFixedNums] = useState<Set<number>>(emptySelection);
@@ -195,14 +231,30 @@ export default function Slip() {
   );
 
   const tabIssuedSheets = useMemo(
-    () => getIssuedSheetsForCategory(issuedSheets, numberTab),
-    [issuedSheets, numberTab],
+    () =>
+      filterSheetsForVisibleRounds(
+        getIssuedSheetsForCategory(issuedSheets, numberTab),
+        currentRound,
+      ),
+    [issuedSheets, numberTab, currentRound],
+  );
+  const tabRoundGroups = useMemo(
+    () =>
+      groupVisibleSheetsByRound(
+        getIssuedSheetsForCategory(issuedSheets, numberTab),
+        currentRound,
+      ),
+    [issuedSheets, numberTab, currentRound],
   );
   const tabWorkingGames = numberTab === "fixed" ? workingFixed : workingRegular;
   const regularGameCount =
-    countIssuedGamesForCategory(issuedSheets, "regular") + workingRegular.length;
+    countGamesInSheets(
+      filterSheetsForVisibleRounds(issuedSheets.regular, currentRound),
+    ) + workingRegular.length;
   const fixedGameCount =
-    countIssuedGamesForCategory(issuedSheets, "fixed") + workingFixed.length;
+    countGamesInSheets(
+      filterSheetsForVisibleRounds(issuedSheets.fixed, currentRound),
+    ) + workingFixed.length;
   const games = useMemo(
     () => [
       ...flattenIssuedSheets(issuedSheets),
@@ -238,10 +290,18 @@ export default function Slip() {
       setWorkingFixed([]);
       setView("qr");
       if (params.get("sheet") === "last") {
-        const sheets = getIssuedSheetsForCategory(nextIssued, tab);
-        setActiveSheetIndex(Math.max(0, sheets.length - 1));
+        const sheets = filterSheetsForVisibleRounds(
+          getIssuedSheetsForCategory(nextIssued, tab),
+          currentRound,
+        );
+        setActiveAnchorId(pickDefaultAnchorId(sheets));
       }
-    } else if (countIssuedSheetsForCategory(nextIssued, tab) > 0) {
+    } else if (
+      filterSheetsForVisibleRounds(
+        getIssuedSheetsForCategory(nextIssued, tab),
+        currentRound,
+      ).length > 0
+    ) {
       setView("qr");
     }
 
@@ -303,10 +363,14 @@ export default function Slip() {
   }, []);
 
   useEffect(() => {
-    if (activeSheetIndex >= tabIssuedSheets.length && activeSheetIndex > 0) {
-      setActiveSheetIndex(Math.max(0, tabIssuedSheets.length - 1));
+    if (
+      activeAnchorId &&
+      tabIssuedSheets.some((sheet) => sheet[0]?.id === activeAnchorId)
+    ) {
+      return;
     }
-  }, [activeSheetIndex, tabIssuedSheets.length]);
+    setActiveAnchorId(pickDefaultAnchorId(tabIssuedSheets));
+  }, [activeAnchorId, tabIssuedSheets]);
 
   const toggleNumber = useCallback((n: number) => {
     setError(null);
@@ -318,6 +382,12 @@ export default function Slip() {
       const next = new Set(prev);
       if (next.has(n)) {
         next.delete(n);
+        setManualPicked((manual) => {
+          if (!manual.has(n)) return manual;
+          const nextManual = new Set(manual);
+          nextManual.delete(n);
+          return nextManual;
+        });
         setFixedNums((fixed) => {
           if (!fixed.has(n)) return fixed;
           const nextFixed = new Set(fixed);
@@ -331,6 +401,7 @@ export default function Slip() {
         return prev;
       }
       next.add(n);
+      setManualPicked((manual) => new Set(manual).add(n));
       return next;
     });
   }, [excludedNums]);
@@ -379,6 +450,7 @@ export default function Slip() {
     if (pickModal === "fixed") {
       const nextFixed = new Set(modalDraft);
       setFixedNums(nextFixed);
+      setManualPicked(new Set(nextFixed));
       setSelected((prev) => {
         const next = new Set(prev);
         for (const num of excludedNums) next.delete(num);
@@ -418,12 +490,20 @@ export default function Slip() {
 
   function handleAutoFill() {
     setError(null);
+    if (autoSemi) {
+      setError(
+        "자동/반자동 모드에서는 1~5개만 직접 고르거나, 번호 없이 선택 완료를 누르세요.",
+      );
+      return;
+    }
     const base = new Set(fixedNums);
     for (const n of selected) {
       if (!excludedNums.has(n)) base.add(n);
     }
     if (base.size >= SLOT_COUNT) {
-      setSelected(new Set([...base].slice(0, SLOT_COUNT)));
+      const filled = new Set([...base].slice(0, SLOT_COUNT));
+      setSelected(filled);
+      setManualPicked(new Set(filled));
       return;
     }
     const need = SLOT_COUNT - base.size;
@@ -436,16 +516,20 @@ export default function Slip() {
       setError("제외수가 너무 많아 6개를 채울 수 없습니다.");
       return;
     }
-    setSelected(new Set([...base, ...pool.slice(0, need)]));
+    const filled = new Set([...base, ...pool.slice(0, need)]);
+    setSelected(filled);
+    setManualPicked(new Set(filled));
   }
 
   function clearSelectedKeepFixed() {
     setSelected(new Set(fixedNums));
+    setManualPicked(new Set(fixedNums));
     setError(null);
   }
 
   function resetEditorSelection() {
     setSelected(emptySelection());
+    setManualPicked(emptySelection());
     setAutoSemi(false);
     setEditingGameId(null);
     setFixedNums(emptySelection());
@@ -466,18 +550,22 @@ export default function Slip() {
       return false;
     }
 
-    const games = tabWorkingGames.map((game) => ({ ...game }));
+    const drwNo = currentRound;
+    const games = stampSlipSheetRound(
+      tabWorkingGames.map((game) => ({ ...game })),
+      drwNo,
+    );
     const replaceIndex = reissueSheetIndex;
-    let targetIndex = tabIssuedSheets.length;
+    let newAnchorId = games[0]?.id ?? null;
 
     setIssuedSheets((prev) => {
       const nextSheets = [...prev[numberTab]];
       if (replaceIndex !== null && replaceIndex >= 0 && replaceIndex < nextSheets.length) {
         nextSheets[replaceIndex] = games;
-        targetIndex = replaceIndex;
+        newAnchorId = games[0]?.id ?? newAnchorId;
       } else {
-        targetIndex = nextSheets.length;
         nextSheets.push(games);
+        newAnchorId = games[0]?.id ?? newAnchorId;
       }
       return { ...prev, [numberTab]: nextSheets };
     });
@@ -485,7 +573,7 @@ export default function Slip() {
     resetEditorSelection();
     setReissueSheetIndex(null);
     if (!createdAt) setCreatedAt(new Date().toISOString());
-    setActiveSheetIndex(targetIndex);
+    if (newAnchorId) setActiveAnchorId(newAnchorId);
     setView("qr");
     setMessage(
       replaceIndex !== null
@@ -511,26 +599,29 @@ export default function Slip() {
     setView("editor");
   }
 
-  function openEditActiveSheet() {
+  function openEditActiveSheet(anchorId?: string) {
     if (numberTab !== "fixed") return;
-    const sheet = tabIssuedSheets[activeSheetIndex];
+    const targetId = anchorId ?? activeAnchorId;
+    const sheetIndex = findSheetIndexInCategory(issuedSheets, numberTab, targetId);
+    const sheet =
+      sheetIndex >= 0
+        ? getIssuedSheetsForCategory(issuedSheets, numberTab)[sheetIndex]
+        : undefined;
     if (!sheet || sheet.length === 0) return;
 
     resetEditorSelection();
     setWorkingFixed(sheet.map((game) => ({ ...game })));
-    setReissueSheetIndex(activeSheetIndex);
+    setReissueSheetIndex(sheetIndex);
     setView("editor");
     setMessage("번호를 수정한 뒤 하단 「슬립지 QR코드 만들기」로 다시 발행하세요.");
   }
 
   function openGameEditor(game: SlipGame) {
-    const tabIndex = tabWorkingGames.findIndex((row) => row.id === game.id);
-    if (tabIndex >= 0) {
-      setActiveSheetIndex(0);
-    }
     setEditingGameId(game.id);
-    setSelected(new Set(game.numbers));
-    setAutoSemi(game.numbers.length > 0 && game.numbers.length < 6);
+    const isAuto = game.mode === "A" || game.numbers.length === 0;
+    setAutoSemi(isAuto || (game.numbers.length > 0 && game.numbers.length < 6));
+    setManualPicked(new Set(isAuto ? [] : game.numbers));
+    setSelected(new Set(isAuto ? [] : game.numbers));
     setFixedNums(emptySelection());
     setExcludedNums(emptySelection());
     setPickModal(null);
@@ -542,11 +633,18 @@ export default function Slip() {
 
   function switchTab(tab: SlipNumberTab) {
     setNumberTab(tab);
-    setActiveSheetIndex(0);
+    const visibleSheets = filterSheetsForVisibleRounds(
+      getIssuedSheetsForCategory(issuedSheets, tab),
+      currentRound,
+    );
+    setActiveAnchorId(pickDefaultAnchorId(visibleSheets));
     setGamesOpen(false);
     resetEditorSelection();
     setReissueSheetIndex(null);
-    const issuedCount = countIssuedSheetsForCategory(issuedSheets, tab);
+    const issuedCount = filterSheetsForVisibleRounds(
+      getIssuedSheetsForCategory(issuedSheets, tab),
+      currentRound,
+    ).length;
     const workingCount =
       tab === "fixed" ? workingFixed.length : workingRegular.length;
     if (issuedCount > 0) {
@@ -571,23 +669,33 @@ export default function Slip() {
   }
 
   function buildGameFromSelection(): SlipGame | null {
-    const nums = selectedList;
-    if (nums.length === 0) {
+    const pickNums = autoSemi
+      ? [...manualPicked].filter((n) => !excludedNums.has(n)).sort((a, b) => a - b)
+      : selectedList;
+
+    if (pickNums.length === 0) {
       if (!autoSemi) {
         setError("번호를 선택하거나 자동/반자동을 켜 주세요.");
         return null;
       }
-    } else if (nums.length < 6 && !autoSemi) {
+    } else if (pickNums.length < 6 && !autoSemi) {
       setError("번호 6개를 선택하거나 자동/반자동을 켜 주세요.");
       return null;
     }
 
-    const mode: SlipGame["mode"] = nums.length === 0 ? "A" : "M";
+    let resolved: { numbers: number[]; mode: "M" | "A" };
+    try {
+      resolved = resolveSlipPickForEncode(pickNums, { autoSemi });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "번호를 확인해 주세요.");
+      return null;
+    }
+
     const source = numberTab === "fixed" ? "mypicks" : "manual";
     return {
       id: editingGameId ?? newId(),
-      numbers: nums.length === 0 ? [] : [...nums],
-      mode,
+      numbers: resolved.numbers,
+      mode: resolved.mode,
       source,
       sourceLabel: SLIP_SOURCE_LABELS[source],
     };
@@ -623,13 +731,18 @@ export default function Slip() {
     });
   }
 
-  function markSheetPrintDone(sheetIndex: number): boolean {
-    const sheet = tabIssuedSheets[sheetIndex];
-    const anchorId = sheet?.[0]?.id;
-    if (!anchorId || printDoneSheetIds.has(anchorId)) return false;
+  function markSheetPrintDone(anchorId: string): boolean {
+    const sheetIndex = findSheetIndexInCategory(issuedSheets, numberTab, anchorId);
+    const sheet =
+      sheetIndex >= 0
+        ? getIssuedSheetsForCategory(issuedSheets, numberTab)[sheetIndex]
+        : undefined;
+    const anchor = sheet?.[0]?.id;
+    if (!anchor || printDoneSheetIds.has(anchor)) return false;
 
-    const nextIds = new Set([...printDoneSheetIds, anchorId]);
+    const nextIds = new Set([...printDoneSheetIds, anchor]);
     setPrintDoneSheetIds(nextIds);
+    archivePrintDoneSheet(sheet);
     saveSlipDraft({
       games: flattenIssuedSheets(issuedSheets),
       issuedSheets,
@@ -644,14 +757,17 @@ export default function Slip() {
     return true;
   }
 
-  function removeSlipSheet(sheetIndex: number) {
-    const removed = tabIssuedSheets[sheetIndex];
-    const anchorId = removed?.[0]?.id;
+  function removeSlipSheet(anchorId: string) {
+    const sheetIndex = findSheetIndexInCategory(issuedSheets, numberTab, anchorId);
+    const removed =
+      sheetIndex >= 0
+        ? getIssuedSheetsForCategory(issuedSheets, numberTab)[sheetIndex]
+        : undefined;
 
     setIssuedSheets((prev) => {
-      const nextSheets = [...prev[numberTab]];
-      nextSheets.splice(sheetIndex, 1);
+      const nextSheets = [...prev[numberTab]].filter((sheet) => sheet[0]?.id !== anchorId);
       const next = { ...prev, [numberTab]: nextSheets };
+      const visibleRemaining = filterSheetsForVisibleRounds(nextSheets, currentRound);
       if (
         next.regular.length === 0 &&
         next.fixed.length === 0 &&
@@ -660,18 +776,18 @@ export default function Slip() {
       ) {
         setCreatedAt(null);
         setView("list");
-      } else if (nextSheets.length === 0 && tabWorkingGames.length === 0) {
+        setActiveAnchorId(null);
+      } else if (visibleRemaining.length === 0 && tabWorkingGames.length === 0) {
         setView("list");
+        setActiveAnchorId(null);
+      } else {
+        setActiveAnchorId(pickDefaultAnchorId(visibleRemaining));
       }
       return next;
     });
 
-    if (anchorId) {
-      setPrintDoneSheetIds((prev) => {
-        const next = new Set(prev);
-        next.delete(anchorId);
-        return next;
-      });
+    if (removed && removed.length > 0 && printDoneSheetIds.has(anchorId)) {
+      archivePrintDoneSheet(removed);
     }
 
     setMessage(`QR슬립지(${removed?.length ?? 0}게임)를 삭제했습니다.`);
@@ -724,8 +840,10 @@ export default function Slip() {
 
     if (promotedCount > 0) {
       setIssuedSheets((prev) => {
-        const sheets = [...prev.regular];
-        sheets.splice(activeSheetIndex, 1);
+        const promoteAnchor = activeAnchorId;
+        const sheets = [...prev.regular].filter(
+          (sheet) => sheet[0]?.id !== promoteAnchor,
+        );
         return { ...prev, regular: sheets };
       });
       const promoted = filterSlipGamesByCategory(next, "fixed").filter(
@@ -751,10 +869,10 @@ export default function Slip() {
   const showPromoteToFixed = numberTab === "regular";
 
   const createdAtLabel = createdAt ? formatCreatedAt(createdAt) : null;
-  const activeSheetGames = useMemo(
-    () => tabIssuedSheets[activeSheetIndex] ?? [],
-    [tabIssuedSheets, activeSheetIndex],
-  );
+  const activeSheetGames = useMemo(() => {
+    const sheet = tabIssuedSheets.find((row) => row[0]?.id === activeAnchorId);
+    return sheet ?? tabIssuedSheets[tabIssuedSheets.length - 1] ?? [];
+  }, [tabIssuedSheets, activeAnchorId]);
 
   const importHref = "/saved-numbers";
   const importLabel = "나의 로또 번호 불러오기";
@@ -792,31 +910,18 @@ export default function Slip() {
 
       {showQrView ? (
         <>
-          <SlipInlineQr
-            sheets={tabIssuedSheets}
-            activeSheetIndex={activeSheetIndex}
-            onSheetChange={setActiveSheetIndex}
-            onDeleteSheet={() => removeSlipSheet(activeSheetIndex)}
-            onEditSheet={numberTab === "fixed" ? openEditActiveSheet : undefined}
+          <SlipRoundQrSections
+            groups={tabRoundGroups}
+            currentRound={currentRound}
+            activeAnchorId={activeAnchorId}
+            onActiveAnchorChange={setActiveAnchorId}
             printDoneSheetIds={printDoneSheetIds}
             onMarkPrintDone={markSheetPrintDone}
+            onDeleteSheet={removeSlipSheet}
+            onEditSheet={numberTab === "fixed" ? openEditActiveSheet : undefined}
+            showPromoteToFixed={showPromoteToFixed}
+            onPromoteToFixed={() => setPromoteDialogOpen(true)}
           />
-
-          {showPromoteToFixed ? (
-            <div className="mobile-slip-qr__promote">
-              <button
-                type="button"
-                onClick={() => setPromoteDialogOpen(true)}
-                className="mobile-slip-qr__promote-btn"
-              >
-                <span className="slip-game-category slip-game-category--fixed">
-                  {SLIP_GAME_CATEGORY_LABELS.fixed}
-                </span>
-                고정번호 이동
-                <ChevronRight className="w-4 h-4 shrink-0" aria-hidden />
-              </button>
-            </div>
-          ) : null}
 
           <SlipGamesAccordion
             games={activeSheetGames}

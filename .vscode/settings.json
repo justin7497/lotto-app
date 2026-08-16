@@ -1,0 +1,25 @@
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.git/objects/**": true,
+    "**/.cache/**": true,
+    "**/.local/**": true,
+    "**/.gradle/**": true,
+    "**/android-twa/**/build/**": true,
+    "**/.firebase/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.cache": true,
+    "**/.local": true,
+    "**/.gradle": true,
+    "**/android-twa/**/build": true
+  },
+  "files.exclude": {
+    "**/.cache": true,
+    "**/.local": true
+  },
+  "typescript.tsserver.maxTsServerMemory": 1024
+}

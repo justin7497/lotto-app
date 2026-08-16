@@ -300,7 +300,7 @@ export function isCampaignDueForDevice(campaign, device, now = new Date()) {
       return day === 6 && hour >= 17 && hour <= 19;
     }
     case "saturday-post-draw":
-      // 추첨 후 발송은 notify-engagement.mjs --campaign=sat-post-draw 로만 실행
+      // 추첨 후 발송은 Functions runPostDrawNotifications(sat-post-draw) 또는 CLI --campaign=sat-post-draw
       return false;
     default:
       return false;

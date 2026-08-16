@@ -5,6 +5,9 @@
 import type { SlipGameSourceId, SlipGameCategory } from "@/utils/slipGameMeta";
 import { SLIP_SOURCE_LABELS, slipGameCategory } from "@/utils/slipGameMeta";
 import { GAMES_PER_SLIP, type SlipPickMode } from "@/utils/mobileSlip";
+import { normalizeSlipPickForEncode } from "@/utils/slipEncodeRules";
+import { migrateLegacySheetRounds, stampSlipSheetRound } from "@/utils/slipRound";
+import { getCurrentPurchaseRoundNo } from "@/utils/savedNumbers";
 import { newSlipBatchId } from "@/utils/slipGameMeta";
 
 export type SavedNumberSlipItem = {
@@ -19,11 +22,14 @@ function savedNumberToSlipGame(
   category: SlipGameCategory,
   issueBatchId?: string,
 ): SlipGame {
-  const mode: SlipPickMode = g.slipPickMode === "A" ? "A" : "M";
+  const normalized = normalizeSlipPickForEncode({
+    numbers: g.numbers,
+    mode: g.slipPickMode ?? (g.numbers.length === 0 ? "A" : "M"),
+  });
   return {
     id: `saved-${g.savedSetId ?? "local"}-${Date.now()}-${index}`,
-    numbers: mode === "A" ? [] : [...g.numbers],
-    mode,
+    numbers: normalized.numbers,
+    mode: normalized.mode,
     source: category === "fixed" ? "mypicks" : "load",
     sourceLabel: category === "fixed" ? SLIP_SOURCE_LABELS.mypicks : SLIP_SOURCE_LABELS.load,
     savedSetId: g.savedSetId,
@@ -59,6 +65,9 @@ export interface SlipGame {
 
   /** 한 번에 발행한 QR 묶음 — 연속 발행 QR 인코딩용 */
   issueBatchId?: string;
+
+  /** QR 발행 대상 회차 (구매 회차) */
+  issueDrwNo?: number;
 
 }
 
@@ -96,6 +105,10 @@ export function emptySlipSheetStore(): SlipSheetStore {
   return { regular: [], fixed: [] };
 }
 
+/**
+ * 같은 issueBatchId 시트를 하나로 합침 — 연속 발행 QR(한 스캔·여러 장)용.
+ * ⚠️ 불변 규칙 — `.cursor/rules/slip-continuous-qr.mdc`
+ */
 function mergeIssuedBatchSheets(store: SlipSheetStore): SlipSheetStore {
   const merge = (sheets: SlipSheet[]): SlipSheet[] => {
     const out: SlipSheet[] = [];
@@ -158,16 +171,31 @@ function parseSheetStore(raw: unknown): SlipSheetStore {
   };
 }
 
+function sheetsFromGames(games: SlipGame[]): SlipSheetStore {
+  return {
+    regular: chunkGamesToSheets(filterSlipGamesByCategory(games, "regular")),
+    fixed: chunkGamesToSheets(filterSlipGamesByCategory(games, "fixed")),
+  };
+}
+
+function mergeIssuedWithGames(
+  issued: SlipSheetStore,
+  games: SlipGame[],
+): SlipSheetStore {
+  const fromGames = sheetsFromGames(games);
+  return {
+    regular: issued.regular.length > 0 ? issued.regular : fromGames.regular,
+    fixed: issued.fixed.length > 0 ? issued.fixed : fromGames.fixed,
+  };
+}
+
 function migrateIssuedSheets(
   data: Partial<SlipDraft>,
   games: SlipGame[],
 ): SlipSheetStore {
   const base = data.issuedSheets
-    ? parseSheetStore(data.issuedSheets)
-    : {
-        regular: chunkGamesToSheets(filterSlipGamesByCategory(games, "regular")),
-        fixed: chunkGamesToSheets(filterSlipGamesByCategory(games, "fixed")),
-      };
+    ? mergeIssuedWithGames(parseSheetStore(data.issuedSheets), games)
+    : sheetsFromGames(games);
   return mergeIssuedBatchSheets(base);
 }
 
@@ -198,6 +226,30 @@ export function countIssuedSheetsForCategory(
 
 
 
+function migrateGameEncode(game: SlipGame): SlipGame {
+  const normalized = normalizeSlipPickForEncode(game);
+  return { ...game, numbers: normalized.numbers, mode: normalized.mode };
+}
+
+function migrateSheetGames(sheet: SlipSheet): SlipSheet {
+  return sheet.map(migrateGameEncode);
+}
+
+function migrateSheetStoreRounds(store: SlipSheetStore): SlipSheetStore {
+  const currentRound = getCurrentPurchaseRoundNo();
+  return {
+    regular: migrateLegacySheetRounds(store.regular, currentRound),
+    fixed: migrateLegacySheetRounds(store.fixed, currentRound),
+  };
+}
+
+function migrateSheetStore(store: SlipSheetStore): SlipSheetStore {
+  return migrateSheetStoreRounds({
+    regular: store.regular.map(migrateSheetGames),
+    fixed: store.fixed.map(migrateSheetGames),
+  });
+}
+
 function isValidGame(g: unknown): g is SlipGame {
 
   if (!g || typeof g !== "object") return false;
@@ -227,6 +279,13 @@ function isValidGame(g: unknown): g is SlipGame {
   if (row.favoritePickId !== undefined && typeof row.favoritePickId !== "string") return false;
 
   if (row.issueBatchId !== undefined && typeof row.issueBatchId !== "string") return false;
+
+  if (
+    row.issueDrwNo !== undefined &&
+    (!Number.isInteger(row.issueDrwNo) || row.issueDrwNo < 1)
+  ) {
+    return false;
+  }
 
   return true;
 
@@ -283,7 +342,7 @@ export function loadSlipDraft(): SlipDraft {
 
     const games = Array.isArray(data.games) ? data.games.filter(isValidGame) : [];
 
-    const issuedSheets = migrateIssuedSheets(data, games);
+    const issuedSheets = migrateSheetStore(migrateIssuedSheets(data, games));
 
     const selected = Array.isArray(data.selected)
 
@@ -456,7 +515,11 @@ export function appendSavedNumberGamesToSlip(
     regular: [...issuedSheets.regular],
     fixed: [...issuedSheets.fixed],
   };
-  nextIssued[category] = [...nextIssued[category], withIds];
+  // 한 번에 고른 게임은 1시트(5초과도 유지) → 한 QR 연속 발행
+  nextIssued[category] = [
+    ...nextIssued[category],
+    stampSlipSheetRound(withIds, getCurrentPurchaseRoundNo()),
+  ];
 
   saveSlipDraft({
     ...draft,
@@ -496,7 +559,10 @@ export function appendIssuedQrSheet(
     regular: [...issuedSheets.regular],
     fixed: [...issuedSheets.fixed],
   };
-  nextIssued[category] = [...nextIssued[category], withIds];
+  nextIssued[category] = [
+    ...nextIssued[category],
+    stampSlipSheetRound(withIds, getCurrentPurchaseRoundNo()),
+  ];
 
   saveSlipDraft({
     ...draft,

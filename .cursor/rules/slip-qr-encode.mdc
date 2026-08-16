@@ -1,0 +1,52 @@
+---
+description: 판매점 슬립 QR 인코딩(MSG_ESLIP) — 절대 변경 금지
+globs: artifacts/lotto-app/src/utils/slipEncodeRules.ts,artifacts/lotto-app/src/utils/mobileSlip.ts,artifacts/lotto-app/src/utils/slipPickResolve.ts,artifacts/lotto-app/src/utils/slipDraft.ts,artifacts/lotto-app/docs/slip-qr-encoding.md,scripts/test-qr-import-runner.ts
+alwaysApply: true
+---
+
+# 슬립 QR 인코딩 (IMMUTABLE)
+
+실사용자가 판매점에서 스캔한다. **추측으로 토큰을 바꾸지 말 것.**  
+단일 정의: `artifacts/lotto-app/src/utils/slipEncodeRules.ts`  
+상세: `artifacts/lotto-app/docs/slip-qr-encoding.md`
+
+이 규칙은 **승인 없이 약화·우회·되돌리지 않는다.**
+
+## 확정 토큰 (v5) — 현장 검증
+
+| 종류 | 저장 | QR | 비고 |
+|------|------|-----|------|
+| 자동 | `mode: A`, 번호 0개 | `Q:` | `A:` 금지 |
+| 반자동 | `mode: M`, 번호 1~5개 | `H:` + 고른 번호만 (2자리×N) | `M:`+`00` 금지 — 단말기 「잘못된 게임 데이터」 |
+| 수동 | `mode: M`, 번호 6개 | `M:` + 12자리 | |
+
+현장(2026-08-04, 1237회 고정번호 5게임, 단말기 출력 확인):
+
+```
+MSG_ESLIP{10645}{(5,M:020711151644,H:02071516,H:07101628,H:0744,H:07111628)}{}6B|
+```
+
+예:
+
+- 자동 5게임: `MSG_ESLIP{10645}{(5,Q:,Q:,Q:,Q:,Q:)}{}A6|`
+- 반자동 13,18: `H:1318` (❌ `M:1318` ❌ `M:131800000000`)
+- 수동 6개: `M:020711151644`
+
+번호는 오름차순 2자리 pad. 체크섬 CRC-8 (`0x07`/`0x00`) + 끝 `|`.
+
+## 금지
+
+- 반자동을 `M:` 으로 인코딩 (`00` 패딩 포함)
+- 자동을 `A:` 로 인코딩
+- 당첨 티켓 `v=` 규칙을 슬립 QR에 섞기 (IN/OUT 분리)
+- 테스트·문서 없이 토큰 변경
+- `encodeSlipPickToken`을 우회해 조립
+
+## 변경 시 필수
+
+1. `SLIP_ENCODE_VERSION` / `SLIP_ENCODE_RULE_VERSION` 올리기
+2. `docs/slip-qr-encoding.md` 동기화
+3. `node scripts/test-qr-import.mjs` 통과 (반자동 H:·자동 Q:·연속 발행)
+4. 사용자 승인 후 배포
+
+연속 발행(6게임 이상 한 QR)은 `.cursor/rules/slip-continuous-qr.mdc` 와 함께 지킨다.

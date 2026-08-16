@@ -1,0 +1,88 @@
+---
+description: QR 반자동·번호저장·슬립지 import 회귀 방지 (lotto-app)
+globs:
+  - artifacts/lotto-app/src/utils/dhlotteryQr.ts
+  - artifacts/lotto-app/src/utils/importNumbers.ts
+  - artifacts/lotto-app/src/utils/mobileSlip.ts
+  - artifacts/lotto-app/src/utils/slipEncodeRules.ts
+  - artifacts/lotto-app/src/utils/slipPickResolve.ts
+  - artifacts/lotto-app/docs/slip-qr-encoding.md
+  - artifacts/lotto-app/src/utils/savedNumbers.ts
+  - artifacts/lotto-app/src/utils/savedNumberGames.ts
+  - artifacts/lotto-app/src/utils/slipDraft.ts
+  - artifacts/lotto-app/src/utils/overlayBackStack.ts
+  - artifacts/lotto-app/src/components/NumberImportSheet.tsx
+  - artifacts/lotto-app/src/components/QrHubSheet.tsx
+  - scripts/test-qr-import*.ts
+  - scripts/test-qr-import.mjs
+alwaysApply: false
+---
+
+# QR 번호 import 회귀 방지 (lotto-app)
+
+이 영역은 **과거에 여러 번 깨졌다가 고친** 기능이다. 수정 후 반드시 `node scripts/test-qr-import.mjs` 를 통과시키고, 배포 전 수동으로 QR 허브 → 번호저장 → **내번호에 저장**을 확인한다.
+
+---
+
+## 1. 반자동 QR 파싱 (`dhlotteryQr.ts`)
+
+티켓 QR `v=` 게임 청크 규칙:
+
+| 형식 | 예시 | 결과 |
+|------|------|------|
+| `m` / `q` / `s` 구분 | `m061722...`, `s111826...` | **m=수동, q/s=반자동** 게임 구분자 |
+| `h` / `s` 접두(본문) | `h131823`, `h021318` | **먼저 h/s 제거** 후 02 로직·숫자 파싱 |
+| `n` + 숫자 | `...244n000000195138...` | 마지막 **체크섬·메타** — 파싱 전 제거 |
+| `02` + 번호 | `021318` | 앞 2자리=개수(02), 뒤=번호 → 13,18 |
+| 12자리 `00` 패딩 | `130018000000`, `021318000000` | 반자동 고정 번호 + 빈 칸 |
+| 12자리 | `061012182327` | 수동 6개 |
+| `0`만 | `000000` | 자동 |
+
+**금지:** `h`/`s` 접두를 별도 분기에서 바로 `parseNumberChunk` 하면 `h021318`이 `[2,13,18]`로 깨진다. **반드시 h/s 제거 후** 02 로직을 적용한다.
+
+---
+
+## 2. 저장 대상 (`importNumbers` → `savedNumbers`)
+
+- QR import **내번호에 저장** → `saveNumberSets()` / `savedSets` (❌ `favoritePicks` 아님)
+- `GeneratedNumbers.slipPickMode`: `"A"`(자동), `"M"`(수동·반자동 1~6개)
+- `sanitizeGame`: `slipPickMode === "M"` 이면 **1~6개** 허용 (반자동 3개 등 버리지 말 것)
+- import 배치는 `dedupeGeneratedNumberSets` / 동주차 제외를 건너뛴다 (`isImportPickGame`)
+
+---
+
+## 3. 슬립 인코딩 (`slipEncodeRules.ts` + `mobileSlip.ts`)
+
+**전체 규칙 문서:** `artifacts/lotto-app/docs/slip-qr-encoding.md`
+
+- 판정·토큰: `classifySlipPick` → `encodeSlipPickToken` (단일 정의)
+- `Q:` = 자동 (복똑방 공식 앱 실측)
+- `H:` + 고른 번호만 = 반자동 (2026-08-04 단말기 실측)
+- `M:` + 12자리 = 수동 6개만
+- ❌ `A:` / 반자동 `M:` (`M:1318`, `M:131800000000`)
+- `normalizeSlipPickForEncode`: mode A면 번호 제거 후 `Q:`
+- `parseGamesRaw`: `Q:`·`A:` 를 `mode: "A"` 로 복원, `H:`·구 `M:` 반자동은 파싱만 호환
+- `parseMobileSlip` 은 throw 하지 않고 `null`
+
+---
+
+## 4. 오버레이 닫기 (`overlayBackStack` + 시트)
+
+- 중첩 시트(QrHub + import preview) **완료 닫기** → `collapseOverlayHistory()` 한 번
+- `NumberImportSheet` `embedded` 일 때 `finishAndClose`는 **부모 `onClose`만** 호출 (이중 collapse 금지)
+- QrHub `finishClose`가 collapse + onClose 담당
+
+---
+
+## 5. 수정 시 체크리스트
+
+- [ ] `node scripts/test-qr-import.mjs` 통과
+- [ ] 반자동 티켓: `h131823`, `h021318`, `h07111628`, `021318`, `130018000000` 케이스
+- [ ] QR import 화면에 **슬립지에 넣기** 버튼 없음 (내번호에 저장만)
+- [ ] 저장 후 홈 버튼·QR 허브 정상 동작 (history 스택 잔여 없음)
+
+---
+
+## 6. 관련 테스트 파일
+
+`scripts/test-qr-import-runner.ts` — 위 케이스를 코드로 고정. 파싱 규칙을 바꿀 때 테스트와 함께 수정한다.

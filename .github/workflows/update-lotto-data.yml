@@ -1,40 +1,36 @@
-# 매주 토요일 추첨(약 20:45 KST) 후 자동으로 당첨번호를 갱신하고 Firebase에 배포합니다.
+# 회차 데이터·추첨 후 알림은 Firebase Functions(Scheduler)가 담당합니다.
+# 토요 Hosting 풀배포는 하지 않습니다 — 앱은 Firestore/API에서 최신 회차를 읽습니다.
 #
-# 필요한 GitHub Secrets (Settings > Secrets and variables > Actions):
-#   FIREBASE_TOKEN      - firebase login:ci 로 발급
-#   LOTTO_APP_ENV       - artifacts/lotto-app/.env.local 전체 내용 (VITE_FIREBASE_* 포함)
-#   FIREBASE_SERVICE_ACCOUNT_JSON - 당첨 알림용 Firebase Admin 서비스 계정 JSON
-#   RESEND_API_KEY      - 당첨 알림 이메일 발송 (Resend)
-#   RESEND_FROM_EMAIL   - 발신 이메일 주소 (선택)
+# 수동으로 번들 JSON 갱신·Hosting 배포가 필요할 때만 실행:
+#   Actions > Update Lotto Data & Deploy > Run workflow
+#   force_deploy=true 이면 새 회차 없어도 빌드·배포
+#   run_notifications=true 는 비상 시에만 (Functions와 이중 발송 주의)
 #
-# 수동 실행: Actions 탭 > Update Lotto Data & Deploy > Run workflow
+# Secrets: FIREBASE_TOKEN, LOTTO_APP_ENV, FIREBASE_SERVICE_ACCOUNT_JSON, RESEND_*
 
 name: Update Lotto Data & Deploy
 
 on:
-  schedule:
-    # 토요 20:50 KST = 11:50 UTC
-    - cron: "50 11 * * 6"
-    # 토요 21:00 KST = 12:00 UTC
-    - cron: "0 12 * * 6"
-    # 토요 21:15 KST = 12:15 UTC (API 지연 대비)
-    - cron: "15 12 * * 6"
-    # 토요 22:00 KST = 13:00 UTC (Actions 지연·API 지연 대비)
-    - cron: "0 13 * * 6"
-    # 일요 09:00 KST 재시도 = 00:00 UTC
-    - cron: "0 0 * * 0"
-    # 일요 21:00 KST 재시도 = 12:00 UTC
-    - cron: "0 12 * * 0"
-  push:
-    branches: [main]
-    paths:
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - ".github/workflows/update-lotto-data.yml"
   workflow_dispatch:
     inputs:
       force_deploy:
         description: "새 회차 없어도 빌드·배포"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      update_bundle_json:
+        description: "lottoData.json 번들 갱신 후 커밋"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      run_notifications:
+        description: "알림 수동 발송 (기본 off — Functions가 담당)"
         required: false
         default: "false"
         type: choice
@@ -86,6 +82,7 @@ jobs:
 
       - name: Update lotto data
         id: update
+        if: github.event.inputs.update_bundle_json == 'true'
         run: |
           node scripts/update-lotto-data.mjs | tee /tmp/update-lotto.log
           LATEST=$(node -e "const r=require('./artifacts/lotto-app/src/data/lottoData.json'); console.log(Math.max(...r.map(x=>x.drwNo)))")
@@ -94,6 +91,7 @@ jobs:
 
       - name: Check data changes
         id: changes
+        if: github.event.inputs.update_bundle_json == 'true'
         run: |
           if git diff --quiet -- artifacts/lotto-app/src/data/lottoData.json; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -104,7 +102,7 @@ jobs:
           fi
 
       - name: Commit updated data
-        if: steps.changes.outputs.changed == 'true'
+        if: github.event.inputs.update_bundle_json == 'true' && steps.changes.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -113,7 +111,7 @@ jobs:
           git push
 
       - name: Notify winners
-        if: steps.changes.outputs.changed == 'true'
+        if: github.event.inputs.run_notifications == 'true'
         continue-on-error: true
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
@@ -122,37 +120,44 @@ jobs:
         run: node scripts/notify-winners.mjs
 
       - name: Notify device wins (issued slip)
-        if: steps.changes.outputs.changed == 'true'
+        if: github.event.inputs.run_notifications == 'true'
         continue-on-error: true
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: node scripts/notify-device-wins.mjs
 
       - name: Notify engagement (post-draw)
-        if: steps.changes.outputs.changed == 'true'
+        if: github.event.inputs.run_notifications == 'true'
         continue-on-error: true
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: node scripts/notify-engagement.mjs --campaign=sat-post-draw
 
+      - name: Refresh Firestore lotto detail cache
+        if: github.event.inputs.update_bundle_json == 'true' && steps.changes.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/refresh-lotto-detail-sync.mjs
+
       - name: Install functions dependencies
         if: >-
-          steps.changes.outputs.changed == 'true' ||
-          github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true'
+          (github.event.inputs.update_bundle_json == 'true' && steps.changes.outputs.changed == 'true') ||
+          github.event.inputs.force_deploy == 'true'
         run: npm ci --prefix functions
 
       - name: Typecheck lotto app
         if: >-
-          steps.changes.outputs.changed == 'true' ||
-          github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true'
+          (github.event.inputs.update_bundle_json == 'true' && steps.changes.outputs.changed == 'true') ||
+          github.event.inputs.force_deploy == 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: corepack pnpm --filter @workspace/lotto-app run typecheck
 
       - name: Build and deploy
         if: >-
-          steps.changes.outputs.changed == 'true' ||
-          github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true'
+          (github.event.inputs.update_bundle_json == 'true' && steps.changes.outputs.changed == 'true') ||
+          github.event.inputs.force_deploy == 'true'
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           PORT: "5173"
@@ -176,8 +181,8 @@ jobs:
           echo "Deploying round ${LATEST_DRW_NO:-?}회: $DEPLOY_ONLY"
           npx firebase-tools@14.12.0 deploy --only "$DEPLOY_ONLY" --project lotto-app-ljh --non-interactive
 
-      - name: Skip deploy (already up to date)
+      - name: Skip deploy
         if: >-
-          steps.changes.outputs.changed != 'true' &&
-          !(github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true')
-        run: echo "Already up to date. Deploy skipped."
+          !(github.event.inputs.update_bundle_json == 'true' && steps.changes.outputs.changed == 'true') &&
+          github.event.inputs.force_deploy != 'true'
+        run: echo "No deploy requested. Weekly draw sync runs on Firebase Functions Scheduler."

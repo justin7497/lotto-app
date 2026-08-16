@@ -330,14 +330,14 @@ export default function NumberImportSheet({
                     lead="복권 티켓 QR을 스캔해 번호를 불러옵니다"
                   />
                   <TrustScannerCard label="복권 우측 상단 QR을 맞춰 주세요">
-                    <div key={scanSession} id={readerId} className="qr-scanner-wrap qr-scanner-wrap--ticket rounded-xl overflow-hidden bg-black relative">
-                      <div className="qr-scanner-reader" />
+                    <div key={scanSession} className="qr-scanner-wrap qr-scanner-wrap--ticket rounded-xl overflow-hidden bg-black relative">
+                      <div id={readerId} className="qr-scanner-reader" />
                       {!cameraError ? (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <div className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center">
                           <TrustScannerFrame />
                         </div>
                       ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                        <div className="absolute inset-0 z-[3] flex flex-col items-center justify-center gap-3 p-6 text-center">
                           <QrCode className="w-12 h-12 text-white/70" />
                           <p className="text-lg text-white/90 font-semibold leading-relaxed">{cameraError}</p>
                         </div>

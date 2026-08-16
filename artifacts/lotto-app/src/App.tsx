@@ -31,7 +31,9 @@ import DrawLuckyBox from "@/pages/draw/DrawLuckyBox";
 import DrawPlinko from "@/pages/draw/DrawPlinko";
 import CharacterPreview from "@/pages/CharacterPreview";
 import NetPrizeCalculator from "@/pages/NetPrizeCalculator";
+import BulkTicketPhotoImport from "@/pages/BulkTicketPhotoImport";
 import AppUpdateTest from "@/pages/AppUpdateTest";
+import DevReleasePanel from "@/pages/DevReleasePanel";
 import AppUpdatePrompt from "@/components/AppUpdatePrompt";
 import EngagementPushBootstrap from "@/components/EngagementPushBootstrap";
 import { AUTH_UI_VISIBLE } from "@/config/authUi";
@@ -42,6 +44,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { HomeThemeProvider } from "@/context/HomeThemeContext";
 import { LottoDataProvider } from "@/context/LottoDataContext";
 import { queryClient } from "@/lib/queryClient";
+import { recordRouteChange } from "@/utils/navStack";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -60,6 +63,19 @@ function HashRouteSync() {
     const nextUrl = `${basePath}${path}`.replace(/\/{2,}/g, "/") || "/";
     window.history.replaceState(null, "", nextUrl);
   }, [setLocation]);
+
+  return null;
+}
+
+/** SPA 내비게이션 스택 기록 (나야나야 navStack 패턴) */
+function NavStackRecorder() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    const pathname = location.split("?")[0] || "/";
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    recordRouteChange(`${pathname}${search}`);
+  }, [location]);
 
   return null;
 }
@@ -131,7 +147,9 @@ function Router() {
           <Route path="/number-stats" component={NumberStats} />
           <Route path="/win-notifications" component={WinNotifications} />
           <Route path="/notification-settings" component={NotificationSettings} />
+          <Route path="/bulk-ticket-import" component={BulkTicketPhotoImport} />
           <Route path="/dev/update-test" component={AppUpdateTest} />
+          <Route path="/dev/release" component={DevReleasePanel} />
           <Route path="/net-prize" component={NetPrizeCalculator} />
           <Route path="/home-theme" component={HomeTheme} />
           <Route path="/privacy" component={PrivacyPolicy} />
@@ -189,6 +207,7 @@ function App() {
   return (
     <WouterRouter base={basePath}>
       <HashRouteSync />
+      <NavStackRecorder />
       <AppFrame />
     </WouterRouter>
   );

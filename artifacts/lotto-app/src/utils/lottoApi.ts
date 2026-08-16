@@ -150,6 +150,36 @@ export async function fetchMissingRounds(
   return directResults;
 }
 
+/** 알려진 최신 회차 다음 번호가 API에 올라왔는지 즉시 확인 (배포 대기 없음) */
+export async function fetchNextPublishedRound(
+  afterDrwNo: number,
+): Promise<LottoRound | null> {
+  const target = afterDrwNo + 1;
+  if (target < 1) return null;
+  const viaProxy = await fetchRoundViaProxy(target);
+  if (viaProxy) return viaProxy;
+  return fetchRoundDirect(target);
+}
+
+/**
+ * 동행복권에 공개된 최신 회차를 빠르게 찾음.
+ * knownMax+1부터 순방향으로 확인 (토요 API 오픈 직후에 유리).
+ */
+export async function fetchNewestPublishedRound(
+  knownMax: number,
+): Promise<LottoRound | null> {
+  let latest: LottoRound | null = null;
+  let cursor = Math.max(1, knownMax + 1);
+  // 한 번에 최대 5회차까지 (통상 1회차만 새로 생김)
+  for (let i = 0; i < 5; i += 1) {
+    const round = await fetchNextPublishedRound(cursor - 1);
+    if (!round) break;
+    latest = round;
+    cursor = round.drwNo + 1;
+  }
+  return latest;
+}
+
 export async function fetchRemoteLatestDrwNo(): Promise<number | null> {
   try {
     const res = await fetch(`${getProxyBase()}/lotto/latest`, {
@@ -174,6 +204,24 @@ export async function fetchRemoteLatestDrwNo(): Promise<number | null> {
   } catch {
     return null;
   }
+}
+
+/** 한국(서울) 토요 추첨 직후 창 — 클라이언트 폴링용 */
+export function isKoreaSaturdayDrawWindow(now = new Date()): boolean {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(now);
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  if (weekday !== "Sat") return false;
+  if (hour < 20 || hour > 23) return false;
+  if (hour === 20 && minute < 35) return false;
+  return true;
 }
 
 export function loadCachedRounds(): LottoRound[] {

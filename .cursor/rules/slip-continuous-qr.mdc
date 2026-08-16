@@ -1,0 +1,47 @@
+---
+description: 모바일 슬립 QR 연속 발행(한 QR·여러 장) — 절대 변경 금지
+globs: artifacts/lotto-app/src/utils/mobileSlip.ts,artifacts/lotto-app/src/utils/slipDraft.ts,artifacts/lotto-app/src/utils/sendToSlip.ts,artifacts/lotto-app/src/components/SlipInlineQr.tsx,artifacts/lotto-app/src/components/MobileSlipQr.tsx,artifacts/lotto-app/docs/slip-qr-encoding.md
+alwaysApply: true
+---
+
+# 슬립 QR 연속 발행 (IMMUTABLE)
+
+이 규칙은 **절대 변경·약화·우회하지 않는다.** 사용자 승인 없이 되돌리거나 “장당 QR”로 바꾸지 말 것.
+
+## 제품 동작 (확정)
+
+- 물리 슬립지 1장 = 최대 **5게임**
+- **한 번에** 고른/보낸 게임이 **6개 이상**이면 → **QR 1개**로 연속 발행
+- 예: 15게임 → `MSG_ESLIP{10645}{(5,...)(5,...)(5,...)}{}XX|` → 단말기에서 **3장** 출력
+- UI 문구: 「한 번 스캔하면 N게임이 연속 발행됩니다」
+
+## 코드 계약 (깨면 안 됨)
+
+1. `encodeGamesToMobileSlipPayload(games)`
+   - `games.length <= 5` → 단일 블록
+   - `games.length > 5` → **반드시** `encodeMobileSlipPayload` / `buildMultiSlipBody`
+   - 5초과 시 `throw` / `slice(0, 5)` **금지**
+
+2. `appendSavedNumberGamesToSlip` / `sendToSlip` 등 일괄 추가
+   - 한 번의 선택·전송은 **시트 1개**로 저장 (5초과도 쪼개지 않음)
+   - 5초과면 공통 `issueBatchId` 부여
+
+3. `mergeIssuedBatchSheets`
+   - 같은 `issueBatchId` 시트는 로드 시 **합침**
+   - `normalizeIssuedSheets`처럼 5게임 단위로 **재분할 금지**
+
+4. `SlipInlineQr` / `MobileSlipQr`
+   - 활성 시트의 게임 **전부** 인코딩 (slice 금지)
+   - 5초과 시트는 스와이프로 쪼개 보이지 않음
+
+## 금지 예시
+
+- `if (games.length > 5) throw new Error("QR 1장당 최대 5게임")`
+- `games.slice(0, GAMES_PER_SLIP)` 후 인코딩
+- `chunkGamesToSheets`로 일괄 선택을 장마다 나눠 각각 별도 QR만 만들기
+- 문서/주석을 “장당 QR만 지원”으로 바꾸기
+
+## 참고
+
+- 상세: `artifacts/lotto-app/docs/slip-qr-encoding.md` §5
+- 회귀: `node scripts/test-qr-import.mjs` (멀티블록 케이스 포함 시)

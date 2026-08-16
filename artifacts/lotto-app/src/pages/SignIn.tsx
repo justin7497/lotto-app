@@ -13,7 +13,7 @@ const inputClass =
 export default function SignInPage() {
   const { signInWithEmail, requestPasswordReset, isSignedIn, isLoaded } = useAuth();
   const [, setLocation] = useLocation();
-  const goBack = useGoBack("/");
+  const goBack = useGoBack();
   const emailRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

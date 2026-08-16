@@ -11,8 +11,10 @@ import type { LottoRound } from "@/data/types";
 import baseData from "@/data/lottoData.json";
 import {
   fetchMissingRounds,
+  fetchNewestPublishedRound,
   fetchRemoteLatestDrwNo,
   getCachedLatestDrwNo,
+  isKoreaSaturdayDrawWindow,
   loadCachedRounds,
   saveCachedRounds,
 } from "@/utils/lottoApi";
@@ -53,18 +55,28 @@ export function LottoDataProvider({ children }: { children: ReactNode }) {
   const syncLatestRounds = useCallback(async () => {
     const cached = loadCachedRounds();
     const cachedMax = getCachedLatestDrwNo();
-    const startFrom = Math.max(BASE_MAX + 1, cachedMax + 1);
+    const knownMax = Math.max(BASE_MAX, cachedMax, maxDrwNo(cached, BASE_MAX));
 
+    // 1) 동행복권 API에 다음 회차가 올랐는지 즉시 확인 (Hosting 재배포 불필요)
+    const apiNewest = await fetchNewestPublishedRound(knownMax);
+
+    // 2) Functions가 올려 둔 Firestore sync
     const firestoreSync = await fetchLottoSyncFromFirestore();
     const firestoreRounds =
       firestoreSync && firestoreSync.latestDrwNo > BASE_MAX
         ? firestoreSync.rounds.filter((r) => r.drwNo > BASE_MAX)
         : [];
 
-    const newRounds = await fetchMissingRounds(startFrom, startFrom + 200);
-    const incoming = [...firestoreRounds, ...newRounds].filter(
-      (r, i, arr) => arr.findIndex((x) => x.drwNo === r.drwNo) === i,
-    );
+    // 3) 빈 구간 채우기
+    const startFrom = Math.max(BASE_MAX + 1, cachedMax + 1);
+    const gapRounds = await fetchMissingRounds(startFrom, startFrom + 200);
+
+    const incoming = [
+      ...(apiNewest ? [apiNewest] : []),
+      ...firestoreRounds,
+      ...gapRounds,
+    ].filter((r, i, arr) => arr.findIndex((x) => x.drwNo === r.drwNo) === i);
+
     const merged = mergeCachedRounds(cached, incoming);
 
     if (incoming.length > 0) {
@@ -73,7 +85,11 @@ export function LottoDataProvider({ children }: { children: ReactNode }) {
     }
 
     const localMax = Math.max(BASE_MAX, cachedMax, maxDrwNo(merged, BASE_MAX));
-    const remoteLatest = await fetchRemoteLatestDrwNo();
+    const remoteLatest =
+      (await fetchRemoteLatestDrwNo()) ??
+      firestoreSync?.latestDrwNo ??
+      apiNewest?.drwNo ??
+      null;
 
     if (remoteLatest !== null && remoteLatest > localMax) {
       setUpdateFailed(true);
@@ -96,6 +112,7 @@ export function LottoDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let pollTimer: number | null = null;
 
     async function load() {
       try {
@@ -117,9 +134,33 @@ export function LottoDataProvider({ children }: { children: ReactNode }) {
     };
     document.addEventListener("visibilitychange", onVisible);
 
+    // 토요 추첨 직후: API 오픈 즉시 반영되도록 짧은 폴링
+    const armDrawPoll = () => {
+      if (pollTimer != null) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      if (!isKoreaSaturdayDrawWindow()) return;
+      pollTimer = window.setInterval(() => {
+        if (document.visibilityState !== "visible") return;
+        if (!isKoreaSaturdayDrawWindow()) {
+          if (pollTimer != null) {
+            window.clearInterval(pollTimer);
+            pollTimer = null;
+          }
+          return;
+        }
+        void load();
+      }, 45_000);
+    };
+    armDrawPoll();
+    const armTimer = window.setInterval(armDrawPoll, 5 * 60_000);
+
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
+      if (pollTimer != null) window.clearInterval(pollTimer);
+      window.clearInterval(armTimer);
     };
   }, [syncLatestRounds]);
 
@@ -152,6 +193,8 @@ export function LottoDataProvider({ children }: { children: ReactNode }) {
 
 export function useLottoContext(): LottoDataContextValue {
   const ctx = useContext(LottoDataContext);
-  if (!ctx) throw new Error("useLottoContext must be used within LottoDataProvider");
+  if (!ctx) {
+    throw new Error("useLottoContext must be used within LottoDataProvider");
+  }
   return ctx;
 }

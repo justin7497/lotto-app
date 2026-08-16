@@ -1,0 +1,166 @@
+---
+description: 로또 앱 중장년·노인층 타이포그래피 설계 대책 (가독성·터치·대비)
+globs: artifacts/lotto-app/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# 중장년·노인층 폰트 설계 대책 (lotto-app)
+
+소원로또는 **50대 이상·스마트폰 초보** 사용자 비중이 높다. 글자 크기만 키우는 것이 아니라 **읽기·누르기·구분**이 동시에 되도록 설계한다.
+
+---
+
+## 1. 설계 원칙
+
+| 원칙 | 내용 |
+|------|------|
+| **한눈에** | 핵심 정보(회차, CTA, 당첨번호)는 주변보다 한 단계 크게 |
+| **최소 16px** | 화면에 보이는 모든 한글·숫자는 16px 미만 금지 |
+| **본문 18px** | 설명·안내·목록 기본값 |
+| **버튼 20px+** | 터치 영역과 글자를 함께 키움 |
+| **대비** | 본문 `gray-700` 이상, 보조 `gray-500` 이상 (배경 대비 4.5:1 목표) |
+| **짧은 줄** | `keep-all` + 카드·격자로 한 줄에 정보 과밀 금지 |
+| **이중 확대 금지** | `senior-ui` 기본 18px 위에 또 `text-lg`를 중첩하지 않음 |
+
+---
+
+## 2. 타입 스케일 (단일 진실 — `index.css` `@theme`)
+
+| 역할 | Tailwind / 시맨틱 | 크기 | 행간 | 용도 |
+|------|-------------------|------|------|------|
+| caption | `text-xs`, `.text-caption` | **16px** | 1.45 | 날짜, 메타, 뱃지 보조 |
+| body-sm | `text-sm` | **17px** | 1.45 | 짧은 보조 문구 |
+| body | `text-base`, `.text-body` | **18px** | 1.5 | 기본 본문 (`senior-ui` 기본) |
+| emphasis | `text-lg`, `.text-emphasis` | **20px** | 1.45 | 버튼, 탭, 강조 라벨 |
+| title | `text-xl`, `.text-title` | **22px** | 1.4 | 카드·섹션 제목 |
+| heading | `text-2xl`, `.text-heading` | **24px** | 1.35 | 페이지 제목 (`SubPageHeader`) |
+| display | `text-3xl`, `.text-display` | **28px** | 1.3 | 홈 회차 번호, 핵심 숫자 |
+| display-lg | `text-4xl` | **32px** | 1.25 | 홈 대형 회차 (필요 시만) |
+
+**새 화면·컴포넌트는 위 표 밖 임의 px 금지.**  
+`text-[10px]` 등은 CSS가 16px로 끌어올리지만 **신규 작성 금지** (레이아웃 깨짐 유발).
+
+---
+
+## 3. 화면별 적용 기준
+
+### 홈 (`Dashboard`, `.mania-hero`)
+- 브랜드·회차: `text-display` / `text-4xl`
+- 당첨 공: `LottoBall` 전용 크기 (타입 스케일과 분리)
+- 하단 4칸 메뉴 라벨: `text-base` 이상, `min-h`로 두 줄 허용
+- 히어로 액션(QR·당첨번호): 아이콘 + `text-lg` 라벨
+
+### 하위 페이지 (`.app-shell--sub`, `.senior-ui`)
+- 헤더 제목: `text-xl` (22px)
+- `PageCard` 본문: `text-base`
+- 카드 소제목: `text-base` bold 이상
+- 하단 고정 CTA: `page-cta` = `text-lg` + `py-3.5` 이상
+
+### 당첨번호 (`/winning-numbers`)
+- 탭: `text-lg`
+- 회차·날짜 격자: `text-lg` / `text-base`
+- 당첨금 격자: 금액 `text-lg`, 등수·인원 `text-base` / `text-sm`
+- 표 대신 **격자 카드** 우선 (노인층 표 스캔 부담 감소)
+
+### 번호 추천 (`Generator`, `LottoKing`, `Saju`)
+- 생성 결과 번호: `ball-row--fluid` (공 크기 별도)
+- 통계·부가 설명: `text-sm` 이상 (caption 남용 금지)
+- 분석 숫자 라벨: `text-[10px]`·`text-[11px]` **금지** → `text-sm` 또는 `text-caption`
+
+### 입력·스캔 (`NumberImportSheet`, `Slip`)
+- 안내 문구: `text-lg`
+- 단계 번호: `text-xl`
+- 오류: `text-lg` + `font-semibold` + 빨간색
+
+---
+
+## 4. 색·굵기·간격
+
+```text
+본문 텍스트     text-gray-700 ~ text-gray-900
+보조 설명       text-gray-500 ~ text-gray-600  (gray-400 이하는 배경 대비 확인 후만)
+강조·링크       text-[#127a6e] 또는 text-link-brand
+제목            font-bold ~ font-extrabold
+본문            font-normal ~ font-semibold
+버튼·CTA        font-bold
+```
+
+- **행간:** 본문 `leading-normal`(1.5) 유지. `leading-none`은 로또 공 숫자·단일 라벨만.
+- **자간:** 한글 기본. `tracking-tight`는 display 숫자에만.
+- **터치:** 텍스트 버튼 최소 높이 **44px**, 아이콘 버튼 **40×40px** 이상.
+
+---
+
+## 5. CSS·코드 구조
+
+1. **토큰** — `@theme`의 `--text-*`만 수정해 앱 전체 스케일 조정
+2. **시맨틱 클래스** — `.text-body`, `.text-heading` 등 역할 이름 우선
+3. **안전망** — `.senior-ui` + `text-[10|11|12px]` → 16px 강제 (로또 공·nav 배지 제외)
+4. **컴포넌트** — `page-cta`, `PageCard`, `SubPageHeader`에 크기 고정 → 페이지마다 재정의 금지
+
+### 권장 패턴
+
+```tsx
+<h1 className="text-heading text-gray-900">당첨번호</h1>
+<p className="text-body text-gray-700">회차별 당첨번호를 확인하세요.</p>
+<p className="text-caption text-gray-500">2026-07-18 추첨</p>
+<button className="page-cta page-cta--dark">저장</button>
+```
+
+### 금지 패턴
+
+```tsx
+// ❌ 임의 초소형
+<span className="text-[10px]">제외수 3</span>
+// ❌ senior-ui 안에서 이중 확대
+<div className="senior-ui text-lg"><p className="text-xl">...</p></div>
+// ❌ 연한 회색 본문
+<p className="text-sm text-gray-400">긴 설명 문단...</p>
+```
+
+---
+
+## 6. 현재 갭 & 개선 단계
+
+### Phase A — 즉시 (규칙·안전망, 완료·유지)
+- [x] `@theme` 시니어 스케일 (16~28px)
+- [x] `.senior-ui` 전역 18px + `keep-all`
+- [x] `text-[10|11|12px]` → 16px 강제
+
+### Phase B — 단기 (컴포넌트 정리)
+- [x] `Generator`, `LottoKing`, `Saju`의 `text-[10px]`·`text-[11px]` → `text-caption`
+- [x] `index.css` 내 `font-size: 0.7~0.85rem` 하드코딩 → `var(--text-*)` 치환
+- [x] `SlipBallRow` 슬롯 라벨 `text-[11px]` → `text-caption`
+
+### Phase C — 중기 (패턴 통일)
+- [ ] 보조 라벨 전용 `.text-meta` 유틸 (caption + gray-500 고정)
+- [ ] 표·통계 패널 → 카드 격자형으로 통일 (당첨번호 페이지 패턴 확산)
+- [ ] 다크 배경(홈 히어로) 위 텍스트 대비 WCAG 점검
+
+### Phase D — 검증
+- [ ] 실기기 320px / 375px / 414px에서 50·60대 테스트
+- [ ] iOS/Android 시스템 글자 크기 **125%~150%** 에서 레이아웃 깨짐 확인
+- [ ] 스크린리더로 제목·버튼 순서 점검
+
+---
+
+## 7. QA 체크리스트 (PR·배포 전)
+
+- [ ] 새 UI 텍스트가 16px 미만인가?
+- [ ] 주요 버튼이 20px·44px 터치 이상인가?
+- [ ] 긴 안내가 `text-base` + `leading-normal`인가?
+- [ ] 회색 본문이 `gray-500`보다 연하지 않은가?
+- [ ] 한글 단어 중간 줄바꿈이 없는가?
+- [ ] 로또 공 숫자만 별도 크기인가? (의도적 예외)
+
+---
+
+## 8. 예외
+
+| 요소 | 예외 이유 |
+|------|-----------|
+| `LottoBall` 내부 숫자 | 구형 비율·색 구역 유지 |
+| `.nav-win-badge` | 탭 배지 공간 제약 (최소 크기 유지) |
+| 홈 회차 `text-4xl` | 핵심 정보 강조 |
+
+이 예외 외 소형 글자 추가 시 **반드시** 이 문서와 `@theme`를 먼저 수정한다.

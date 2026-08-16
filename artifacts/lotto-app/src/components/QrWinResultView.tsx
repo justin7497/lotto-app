@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import LottoBall from "@/components/LottoBall";
 import type { LottoRound } from "@/data/types";
-import { checkWinResult, type WinResult } from "@/utils/savedNumbers";
+import { checkWinResult, getUserNumberHitState, type WinResult } from "@/utils/savedNumbers";
 import type { DhlotteryWinQr } from "@/utils/dhlotteryQr";
 
 const FIXED_PRIZE: Record<number, number> = {
@@ -62,13 +62,6 @@ export default function QrWinResultView({
         round.drwtNo6,
       ]
     : null;
-  const winningSet = winning ? new Set(winning) : null;
-  const bonusNo = round?.bnusNo ?? null;
-
-  function isHitNumber(n: number): boolean {
-    if (!winningSet) return false;
-    return winningSet.has(n) || n === bonusNo;
-  }
 
   const totalPrize = round ? estimateTotalPrize(result.games, round) : 0;
   const highRank = round ? hasHighRank(result.games, round) : false;
@@ -86,104 +79,106 @@ export default function QrWinResultView({
       ) : null}
 
       <div className="qr-win-page__body">
-        <div className="qr-win-page__round">
-          <p className="qr-win-page__round-no">제{result.roundNo}회</p>
-          {round ? (
-            <p className="qr-win-page__round-date">{formatDrawLabel(round.drwNoDate)}</p>
-          ) : (
-            <p className="qr-win-page__round-date">추첨 결과 대기 중</p>
-          )}
+        <div className="qr-win-page__scroll">
+          <div className="qr-win-page__round">
+            <p className="qr-win-page__round-no">제{result.roundNo}회</p>
+            {round ? (
+              <p className="qr-win-page__round-date">{formatDrawLabel(round.drwNoDate)}</p>
+            ) : (
+              <p className="qr-win-page__round-date">추첨 결과 대기 중</p>
+            )}
+          </div>
+
+          {round && winning ? (
+            <section className="qr-win-page__draw">
+              <h2 className="qr-win-page__draw-title">당첨번호</h2>
+              <div className="ball-row ball-row--fluid qr-win-page__draw-balls">
+                {winning.map((n) => (
+                  <LottoBall key={n} number={n} size="sm" />
+                ))}
+                <span className="qr-win-page__plus">+</span>
+                <LottoBall number={round.bnusNo} size="sm" isBonus />
+              </div>
+            </section>
+          ) : null}
+
+          <section className="qr-win-page__summary">
+            {anyWin ? (
+              <>
+                {highRank ? (
+                  <p className="qr-win-page__prize qr-win-page__prize--high">
+                    1·2등 당첨! 판매점에서 확인하세요
+                  </p>
+                ) : null}
+                {totalPrize > 0 ? (
+                  <p className="qr-win-page__prize">
+                    총 <strong>{totalPrize.toLocaleString("ko-KR")}원</strong> 당첨
+                  </p>
+                ) : null}
+              </>
+            ) : round ? (
+              <p className="qr-win-page__cheer qr-win-page__cheer--muted">아쉽게도, 낙첨되었습니다.</p>
+            ) : (
+              <p className="qr-win-page__cheer qr-win-page__cheer--muted">추첨 후 결과를 확인할 수 있습니다.</p>
+            )}
+          </section>
+
+          <section className="qr-win-page__games">
+            <ul className="qr-win-page__game-list">
+              {result.games.map((numbers, idx) => {
+                const win = round ? checkWinResult(numbers, round) : null;
+                const badge = rankBadge(win);
+                const label = GAME_LABELS[idx] ?? String(idx + 1);
+                const kind = result.kinds[idx];
+                const typeLabel =
+                  numbers.length === 0
+                    ? "자동"
+                    : kind === "semi" || numbers.length < 6
+                      ? "반자동"
+                      : "수동";
+
+                return (
+                  <li key={`${label}-${numbers.join("-")}`} className="qr-win-page__game-row">
+                    <div className="qr-win-page__game-label">
+                      <span className="qr-win-page__game-letter">{label}</span>
+                      <span className="qr-win-page__game-type">{typeLabel}</span>
+                    </div>
+                    <div className="ball-row ball-row--fluid win-result-balls qr-win-page__game-balls">
+                      {numbers.map((n) => {
+                        const hit = round ? getUserNumberHitState(n, numbers, round) : null;
+                        return (
+                        <LottoBall
+                          key={n}
+                          number={n}
+                          size="sm"
+                          matched={hit === null ? null : hit.matched}
+                          isBonus={hit?.isBonusHit ?? false}
+                        />
+                      );
+                      })}
+                      {numbers.length < 6 ? (
+                        <span className="qr-win-page__auto-mark">+자동</span>
+                      ) : null}
+                    </div>
+                    <span className={`qr-win-page__rank qr-win-page__rank--${badge.tone}`}>
+                      {badge.label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         </div>
 
-        {round && winning ? (
-          <section className="qr-win-page__draw">
-            <h2 className="qr-win-page__draw-title">당첨번호</h2>
-            <div className="ball-row ball-row--fluid qr-win-page__draw-balls">
-              {winning.map((n) => (
-                <LottoBall key={n} number={n} size="sm" />
-              ))}
-              <span className="qr-win-page__plus">+</span>
-              <LottoBall number={round.bnusNo} size="sm" isBonus />
-            </div>
-          </section>
-        ) : null}
-
-        <section className="qr-win-page__summary">
-          {anyWin ? (
-            <>
-              <p className="qr-win-page__cheer">축하합니다!</p>
-              {highRank ? (
-                <p className="qr-win-page__prize qr-win-page__prize--high">
-                  1·2등 당첨! 판매점에서 확인하세요
-                </p>
-              ) : null}
-              {totalPrize > 0 ? (
-                <p className="qr-win-page__prize">
-                  총 <strong>{totalPrize.toLocaleString("ko-KR")}원</strong> 당첨
-                </p>
-              ) : null}
-            </>
-          ) : round ? (
-            <p className="qr-win-page__cheer qr-win-page__cheer--muted">아쉽게도, 낙첨되었습니다.</p>
-          ) : (
-            <p className="qr-win-page__cheer qr-win-page__cheer--muted">추첨 후 결과를 확인할 수 있습니다.</p>
-          )}
-        </section>
-
-        <section className="qr-win-page__games">
-          <ul className="qr-win-page__game-list">
-            {result.games.map((numbers, idx) => {
-              const win = round ? checkWinResult(numbers, round) : null;
-              const badge = rankBadge(win);
-              const label = GAME_LABELS[idx] ?? String(idx + 1);
-              const kind = result.kinds[idx];
-              const typeLabel =
-                numbers.length === 0
-                  ? "자동"
-                  : kind === "semi" || numbers.length < 6
-                    ? "반자동"
-                    : "수동";
-
-              return (
-                <li key={`${label}-${numbers.join("-")}`} className="qr-win-page__game-row">
-                  <div className="qr-win-page__game-label">
-                    <span className="qr-win-page__game-letter">{label}</span>
-                    <span className="qr-win-page__game-type">{typeLabel}</span>
-                  </div>
-                  <div className="ball-row ball-row--fluid win-result-balls qr-win-page__game-balls">
-                    {numbers.map((n) => {
-                      const hit = winningSet ? isHitNumber(n) : null;
-                      return (
-                      <LottoBall
-                        key={n}
-                        number={n}
-                        size="sm"
-                        matched={hit === null ? null : hit ? true : false}
-                        isBonus={hit === true && n === bonusNo}
-                      />
-                    );
-                    })}
-                    {numbers.length < 6 ? (
-                      <span className="qr-win-page__auto-mark">+자동</span>
-                    ) : null}
-                  </div>
-                  <span className={`qr-win-page__rank qr-win-page__rank--${badge.tone}`}>
-                    {badge.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        <p className="qr-win-page__disclaimer">
-          본 결과는 참고용이며, 최종 당첨 여부는 동행복권 공식 사이트 또는 판매점에서 확인해
-          주세요. 당첨금 수령 시 실물 복권이 필요합니다.
-        </p>
-
-        <button type="button" onClick={onRescan} className="qr-win-page__rescan">
-          다른 복권 QR 스캔
-        </button>
+        <div className="qr-win-page__footer">
+          <p className="qr-win-page__disclaimer">
+            본 결과는 참고용이며, 최종 당첨 여부는 동행복권 공식 사이트 또는 판매점에서 확인해
+            주세요. 당첨금 수령 시 실물 복권이 필요합니다.
+          </p>
+          <button type="button" onClick={onRescan} className="qr-win-page__rescan">
+            다른 복권 QR 스캔
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -64,6 +64,8 @@ async function main() {
   run("node scripts/notify-device-wins.mjs", { env: process.env });
   run("node scripts/notify-engagement.mjs --campaign=sat-post-draw", { env: process.env });
 
+  run("node scripts/refresh-lotto-detail-sync.mjs", { env: process.env });
+
   run("corepack pnpm run build:lotto");
   run("node scripts/verify-lotto-sync.mjs");
   run("firebase deploy --only hosting:lotto,functions,firestore:rules --project lotto-app-ljh --non-interactive");

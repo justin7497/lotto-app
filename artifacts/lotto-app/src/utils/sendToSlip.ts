@@ -1,11 +1,16 @@
 import type { GeneratedNumbers } from "@/data/types";
+import { resolveSlipPickForEncode } from "@/utils/slipPickResolve";
 import {
-  filterSlipGamesByCategory,
+  emptySlipSheetStore,
+  flattenIssuedSheets,
   loadSlipDraft,
-  mergeSlipGamesByCategory,
   saveSlipDraft,
   type SlipGame,
+  type SlipSheet,
 } from "@/utils/slipDraft";
+import { GAMES_PER_SLIP } from "@/utils/mobileSlip";
+import { getCurrentPurchaseRoundNo } from "@/utils/savedNumbers";
+import { stampSlipSheetRound } from "@/utils/slipRound";
 import {
   newSlipBatchId,
   slipSourceLabel,
@@ -14,6 +19,16 @@ import {
 
 function newSlipGameId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function stampGamesAsIssuedSheets(games: SlipGame[]): SlipSheet[] {
+  const drwNo = getCurrentPurchaseRoundNo();
+  // 한 번에 보낸 번호는 1시트 유지 → 5초과 시 한 QR 연속 발행
+  const issueBatchId = games.length > GAMES_PER_SLIP ? newSlipBatchId() : undefined;
+  const withBatch = issueBatchId
+    ? games.map((g) => ({ ...g, issueBatchId }))
+    : games;
+  return [stampSlipSheetRound(withBatch, drwNo)];
 }
 
 export type SendToSlipResult =
@@ -61,14 +76,17 @@ export function sendGeneratedToSlip(
   }
 
   const draft = loadSlipDraft();
-  const currentRegular = filterSlipGamesByCategory(draft.games, "regular");
+  const prevIssued = draft.issuedSheets ?? emptySlipSheetStore();
+  const stampedSheets = stampGamesAsIssuedSheets(incoming);
   const nextRegular =
-    options.replace === false ? [...currentRegular, ...incoming] : incoming;
+    options.replace === false ? [...prevIssued.regular, ...stampedSheets] : stampedSheets;
+  const nextIssued = { ...prevIssued, regular: nextRegular };
   const keepCreatedAt =
     options.replace === false && draft.games.length > 0 && draft.createdAt;
 
   saveSlipDraft({
-    games: mergeSlipGamesByCategory(draft.games, "regular", nextRegular),
+    games: flattenIssuedSheets(nextIssued),
+    issuedSheets: nextIssued,
     selected: [],
     autoSemi: draft.autoSemi,
     printDoneSheetIds: draft.printDoneSheetIds,
@@ -97,10 +115,10 @@ export function sendPickToSlip(
     return { ok: false, error: "번호 6개를 선택하거나 자동/반자동을 켜 주세요." };
   }
 
-  const mode: SlipGame["mode"] = nums.length === 0 ? "A" : "M";
+  const { numbers, mode } = resolveSlipPickForEncode(nums, { autoSemi: pick.autoSemi });
   const game: SlipGame = {
     id: newSlipGameId(),
-    numbers: nums.length === 0 ? [] : nums,
+    numbers,
     mode,
     source: options.source,
     sourceLabel: label,
@@ -110,13 +128,17 @@ export function sendPickToSlip(
   };
 
   const draft = loadSlipDraft();
-  const currentFixed = filterSlipGamesByCategory(draft.games, "fixed");
-  const nextFixed = options.replace === false ? [...currentFixed, game] : [game];
+  const prevIssued = draft.issuedSheets ?? emptySlipSheetStore();
+  const stampedSheets = stampGamesAsIssuedSheets([game]);
+  const nextFixed =
+    options.replace === false ? [...prevIssued.fixed, ...stampedSheets] : stampedSheets;
+  const nextIssued = { ...prevIssued, fixed: nextFixed };
   const keepCreatedAt =
     options.replace === false && draft.games.length > 0 && draft.createdAt;
 
   saveSlipDraft({
-    games: mergeSlipGamesByCategory(draft.games, "fixed", nextFixed),
+    games: flattenIssuedSheets(nextIssued),
+    issuedSheets: nextIssued,
     selected: [],
     autoSemi: draft.autoSemi,
     printDoneSheetIds: draft.printDoneSheetIds,

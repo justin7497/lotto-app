@@ -13,7 +13,7 @@ const inputClass =
 export default function ResetPasswordPage() {
   const { completePasswordReset, isLoaded } = useAuth();
   const [, setLocation] = useLocation();
-  const goBack = useGoBack("/sign-in");
+  const goBack = useGoBack();
   const [oobCode, setOobCode] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [password, setPassword] = useState("");

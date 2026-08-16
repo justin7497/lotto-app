@@ -13,13 +13,7 @@ export default function WinNotifications() {
   return (
     <div className="page-content">
       <TrustPanel className="trust-panel--wide mb-4">
-        <TrustHeader
-          badges={[
-            { icon: QrCode, label: "QR 인쇄 확정" },
-            { icon: BarChart3, label: "등수 전광판" },
-          ]}
-          lead="모바일 슬립지에서 「발급완료」한 번호만 당첨 결과에 반영됩니다"
-        />
+        <TrustHeader lead="모바일 슬립지에서 「발급완료」한 번호만 당첨 결과에 반영됩니다" />
         <TrustStepGuide compact steps={[...WIN_HISTORY_STEPS]} />
       </TrustPanel>
 

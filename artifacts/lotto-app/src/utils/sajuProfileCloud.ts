@@ -1,9 +1,15 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "@/lib/firebase";
 import {
+  getActiveSajuPerson,
+  getSajuPeopleUpdatedAt,
   loadSajuInput,
+  loadSajuPeopleState,
+  parseSajuPeopleState,
+  replaceSajuPeopleState,
   saveSajuInput,
   type SajuInput,
+  type SajuPeopleState,
 } from "@/utils/sajuLucky";
 
 const SETTINGS_DOC_ID = "sajuProfile";
@@ -46,38 +52,69 @@ function parseCloudInput(raw: unknown): SajuInput | null {
   };
 }
 
+function parseCloudPeople(data: Record<string, unknown>): SajuPeopleState | null {
+  const fromList = parseSajuPeopleState(data);
+  if (fromList) return fromList;
+  const input = parseCloudInput(data);
+  if (!input) return null;
+  const id = "saju_self";
+  return {
+    activeId: id,
+    people: [
+      {
+        ...input,
+        id,
+        name: "나",
+        updatedAt:
+          typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
+      },
+    ],
+  };
+}
+
 export async function loadSajuProfileCloud(uid: string): Promise<{
   input: SajuInput;
+  people: SajuPeopleState;
   updatedAt: string;
 } | null> {
   if (!isFirebaseConfigured || !db) return null;
   const snap = await getDoc(settingsRef(uid));
   if (!snap.exists()) return null;
-  const data = snap.data();
-  const input = parseCloudInput(data);
-  if (!input) return null;
+  const data = snap.data() as Record<string, unknown>;
+  const people = parseCloudPeople(data);
+  if (!people) return null;
+  const active = people.people.find((p) => p.id === people.activeId) ?? people.people[0];
   const updatedAt =
-    typeof data.updatedAt === "string" ? data.updatedAt : new Date(0).toISOString();
-  return { input, updatedAt };
+    typeof data.updatedAt === "string" ? data.updatedAt : active.updatedAt;
+  return {
+    input: {
+      year: active.year,
+      month: active.month,
+      day: active.day,
+      hour: active.hour,
+      minute: active.minute,
+      bloodType: active.bloodType,
+    },
+    people,
+    updatedAt,
+  };
 }
 
 export async function saveSajuProfileCloud(uid: string, input: SajuInput): Promise<void> {
   if (!isFirebaseConfigured || !db) return;
+  const people = loadSajuPeopleState();
+  const active = getActiveSajuPerson(people);
   await setDoc(settingsRef(uid), {
     ...input,
+    name: active.name,
+    activeId: people.activeId,
+    people: people.people,
     updatedAt: new Date().toISOString(),
   });
 }
 
 function readLocalUpdatedAt(): string | null {
-  try {
-    const raw = localStorage.getItem("lotto_saju_profile_v2");
-    if (!raw) return null;
-    const data = JSON.parse(raw) as { updatedAt?: string };
-    return typeof data.updatedAt === "string" ? data.updatedAt : null;
-  } catch {
-    return null;
-  }
+  return getSajuPeopleUpdatedAt();
 }
 
 /** 로그인 시 클라우드 ↔ 로컬 병합 후 로컬에 반영 */
@@ -92,12 +129,12 @@ export async function syncSajuProfileCloud(uid: string): Promise<void> {
     const cloudTime = Date.parse(cloud.updatedAt);
     const localTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
     if (cloudTime >= localTime) {
-      saveSajuInput(cloud.input);
+      replaceSajuPeopleState(cloud.people);
     } else {
       await saveSajuProfileCloud(uid, local);
     }
   } else if (cloud) {
-    saveSajuInput(cloud.input);
+    replaceSajuPeopleState(cloud.people);
   } else if (local) {
     await saveSajuProfileCloud(uid, local);
   }

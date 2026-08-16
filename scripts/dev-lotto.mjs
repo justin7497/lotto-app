@@ -1,6 +1,14 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+
+const previewWrite = spawnSync(process.execPath, [resolve("scripts/write-release-preview.mjs")], {
+  stdio: "inherit",
+  env: process.env,
+});
+if (previewWrite.status !== 0) {
+  process.exit(previewWrite.status ?? 1);
+}
 
 const pnpmCommand = process.platform === "win32" ? "corepack.cmd" : "corepack";
 const children = [];
