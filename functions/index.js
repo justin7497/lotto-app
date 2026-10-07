@@ -25,6 +25,7 @@ const {
 } = require("./lib/passwordResetEmail.mjs");
 
 const sazuApiKeySecret = defineSecret("SAZU_API_KEY");
+const geminiApiKeySecret = defineSecret("GEMINI_API_KEY");
 const slipOmrUrlSecret = defineSecret("SLIP_OMR_URL");
 const resendApiKeyParam = defineString("RESEND_API_KEY", { default: "" });
 const resendFromEmailParam = defineString("RESEND_FROM_EMAIL", { default: "onboarding@resend.dev" });
@@ -82,6 +83,7 @@ async function getLottoDetailModule() {
 
 const DHLOTTERY_URL =
   "https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=";
+const LT645_RESULT_URL = "https://www.dhlottery.co.kr/lt645/selectPstLt645Info.do";
 
 const FETCH_HEADERS = {
   "User-Agent":
@@ -93,6 +95,59 @@ const FETCH_HEADERS = {
 };
 
 const memCache = new Map();
+
+function asLottoBall(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 45 ? n : null;
+}
+
+function roundFromBalls(drwNo, dateRaw, mains, bonus) {
+  const balls = mains.map(asLottoBall);
+  const bnusNo = asLottoBall(bonus);
+  if (balls.some((ball) => ball == null) || bnusNo == null) return null;
+  if (new Set(balls).size !== 6 || balls.includes(bnusNo)) return null;
+  const ymd = String(dateRaw ?? "");
+  const drwNoDate = /^\d{8}$/.test(ymd)
+    ? `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`
+    : ymd;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(drwNoDate)) return null;
+  return {
+    drwNo: Number(drwNo),
+    drwNoDate,
+    drwtNo1: balls[0],
+    drwtNo2: balls[1],
+    drwtNo3: balls[2],
+    drwtNo4: balls[3],
+    drwtNo5: balls[4],
+    drwtNo6: balls[5],
+    bnusNo,
+  };
+}
+
+/** 당첨결과 화면과 같은 주소. getLottoNumber보다 먼저 열리는 경우가 있다. */
+async function fetchFromLt645Result(drwNo) {
+  try {
+    const res = await fetch(`${LT645_RESULT_URL}?srchLtEpsd=${drwNo}`, {
+      headers: {
+        ...FETCH_HEADERS,
+        Referer: "https://www.dhlottery.co.kr/lt645/result",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const item = json?.data?.list?.[0];
+    if (!item || Number(item.ltEpsd) !== Number(drwNo)) return null;
+    return roundFromBalls(
+      item.ltEpsd,
+      item.ltRflYmd,
+      [item.tm1WnNo, item.tm2WnNo, item.tm3WnNo, item.tm4WnNo, item.tm5WnNo, item.tm6WnNo],
+      item.bnsWnNo,
+    );
+  } catch {
+    return null;
+  }
+}
 
 async function fetchFromDhlottery(drwNo) {
   try {
@@ -155,7 +210,10 @@ async function fetchFromPyony(drwNo) {
 
 async function fetchRound(drwNo) {
   if (memCache.has(drwNo)) return memCache.get(drwNo);
-  const fetched = (await fetchFromDhlottery(drwNo)) ?? (await fetchFromPyony(drwNo));
+  const fetched =
+    (await fetchFromLt645Result(drwNo)) ??
+    (await fetchFromDhlottery(drwNo)) ??
+    (await fetchFromPyony(drwNo));
   if (fetched) memCache.set(drwNo, fetched);
   return fetched;
 }
@@ -219,7 +277,7 @@ function parseLottoSubPath(pathOnly) {
   const lottoMatch = pathOnly.match(/\/lotto\/(.*)$/);
   if (lottoMatch) return lottoMatch[1].replace(/\/$/, "");
   const trimmed = pathOnly.replace(/^\/+/, "");
-  if (/^(detail|stores|batch|latest)(\/|$)/.test(trimmed)) return trimmed.replace(/\/$/, "");
+  if (/^(detail|stores|batch|latest|pension|speetto)(\/|$)/.test(trimmed)) return trimmed.replace(/\/$/, "");
   if (/^\d+$/.test(trimmed)) return trimmed;
   return "";
 }
@@ -297,6 +355,57 @@ exports.sazuAnalyze = onRequest(
       });
     } finally {
       clearTimeout(timeout);
+    }
+  },
+);
+
+/** Hosting `/api/ai-consult` — LLM 의도 JSON (번호 생성은 앱 로컬) */
+exports.aiLottoConsult = onRequest(
+  {
+    region: "asia-northeast3",
+    secrets: [geminiApiKeySecret],
+    cors: true,
+    timeoutSeconds: 20,
+    memory: "256MiB",
+  },
+  async (req, res) => {
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      res.status(405).json({ ok: false, useLocal: true, message: "Method not allowed" });
+      return;
+    }
+
+    const body = req.body ?? {};
+    const userText = typeof body.userText === "string" ? body.userText : "";
+    let apiKey = "";
+    try {
+      apiKey = geminiApiKeySecret.value() || "";
+    } catch {
+      apiKey = process.env.GEMINI_API_KEY || "";
+    }
+
+    try {
+      const { resolveAiConsultIntent } = await import("./lib/aiLottoConsult.mjs");
+      const result = await resolveAiConsultIntent({
+        userText,
+        apiKey,
+        model: process.env.GEMINI_MODEL,
+      });
+      if (!result.ok) {
+        res.status(200).json(result);
+        return;
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(200).json({
+        ok: false,
+        useLocal: true,
+        reason: "handler_error",
+        message: error instanceof Error ? error.message : "handler_error",
+      });
     }
   },
 );
@@ -417,6 +526,7 @@ exports.lottoApi = onRequest(
 
       if (subPath === "latest" || subPath.endsWith("/latest")) {
         const latest = await findLatestRound();
+        res.set("Cache-Control", "no-store");
         if (!latest) {
           res.status(503).json({ error: "최신 회차를 불러올 수 없습니다" });
           return;
@@ -439,6 +549,57 @@ exports.lottoApi = onRequest(
           rounds.push(round);
         }
         res.json(rounds);
+        return;
+      }
+
+      if (subPath === "pension/list" || subPath.startsWith("pension/list")) {
+        const { fetchPensionRoundList, fetchPensionRecentInfo } = await import("./lib/pension720.mjs");
+        const rounds = await fetchPensionRoundList();
+        const prizeMap = await fetchPensionRecentInfo(rounds[0]?.drwNo);
+        if (rounds.length === 0) {
+          res.status(503).json({ error: "연금복권 회차를 불러올 수 없습니다" });
+          return;
+        }
+        res.json({
+          latestDrwNo: rounds[0].drwNo,
+          rounds: rounds.map((round) => {
+            const prizes = prizeMap.get(round.drwNo);
+            return prizes?.length ? { ...round, prizes } : round;
+          }),
+        });
+        return;
+      }
+
+      const pensionDetailMatch = subPath.match(/^pension\/detail\/(\d+)$/);
+      if (pensionDetailMatch) {
+        const drwNo = Number(pensionDetailMatch[1]);
+        const { fetchPensionRoundDetail } = await import("./lib/pension720.mjs");
+        const detail = await fetchPensionRoundDetail(drwNo);
+        if (!detail) {
+          res.status(404).json({ error: "연금복권 회차 상세를 찾을 수 없습니다" });
+          return;
+        }
+        res.json(detail);
+        return;
+      }
+
+      const pensionStoresMatch = subPath.match(/^pension\/stores\/(\d+)$/);
+      if (pensionStoresMatch) {
+        const drwNo = Number(pensionStoresMatch[1]);
+        const rankRaw = Number(req.query.rank);
+        const rank = rankRaw === 2 ? 2 : rankRaw === 21 ? 21 : 1;
+        const { fetchPensionWinStores } = await import("./lib/pension720.mjs");
+        const stores = await fetchPensionWinStores(drwNo, rank);
+        res.json({ drwNo, rank, stores });
+        return;
+      }
+
+      if (subPath === "speetto/list" || subPath.startsWith("speetto/list")) {
+        const productRaw = String(req.query.product || "SP1000").toUpperCase();
+        const { fetchSpeettoRounds, resolveSpeettoProductId } = await import("./lib/speetto.mjs");
+        const productId = resolveSpeettoProductId(productRaw);
+        const rounds = await fetchSpeettoRounds(productId, { sellingOnly: true });
+        res.json({ product: productId, rounds });
         return;
       }
 
@@ -482,6 +643,7 @@ exports.lottoApi = onRequest(
         return;
       }
       const round = await fetchRound(drwNo);
+      res.set("Cache-Control", "no-store");
       if (!round) {
         res.status(404).json({ error: "회차 데이터를 찾을 수 없습니다" });
         return;
@@ -706,11 +868,6 @@ async function refreshLottoDetailSyncCache() {
   return payload;
 }
 
-async function refreshLottoFirestoreCaches() {
-  await refreshLottoSyncCache();
-  await refreshLottoDetailSyncCache();
-}
-
 function isSaturdayDrawWindow() {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",
@@ -854,16 +1011,36 @@ async function scheduledLottoSyncHandler() {
       lastSuccessAt: new Date().toISOString(),
       lastError: null,
     });
+    try {
+      const { notifyEngagement } = await import("./lib/notifyEngagement.mjs");
+      await notifyEngagement({
+        db,
+        messaging: getAdminMessaging(),
+        campaignId: "sat-post-draw",
+        round: latest,
+      });
+      console.log(`scheduledLottoSync: open-app notice pushed for ${latest.drwNo}회`);
+    } catch (error) {
+      console.error(`scheduledLottoSync: open-app notice failed for ${latest.drwNo}회`, error);
+    }
   }
 
+  // 번호가 앱에 보이는 캐시에 올라간 직후 알림. 판매점·등수 상세는 알림을 막지 않음.
+  await maybeRunPostDrawNotifications(latest, { numbersJustUpdated: numbersUpdated });
+
   if (numbersUpdated || !detailComplete) {
-    await refreshLottoDetailSyncCache();
-    console.log(`scheduledLottoSync: detail refresh for ${latest.drwNo}회`);
+    try {
+      await refreshLottoDetailSyncCache();
+      console.log(`scheduledLottoSync: detail refresh for ${latest.drwNo}회`);
+    } catch (error) {
+      console.error(`scheduledLottoSync: detail refresh failed for ${latest.drwNo}회`, error);
+      await writeLottoSyncMeta({
+        lastError: error instanceof Error ? error.message : String(error),
+      });
+    }
   } else {
     console.log(`scheduledLottoSync: ${latest.drwNo}회 already complete, skip refresh`);
   }
-
-  await maybeRunPostDrawNotifications(latest, { numbersJustUpdated: numbersUpdated });
 }
 
 /**
@@ -897,30 +1074,89 @@ exports.scheduledLottoSyncSat22 = onSchedule(
   scheduledLottoSyncHandler,
 );
 
+async function sundayRefreshAndNotify(note) {
+  await refreshLottoSyncCache();
+  const latest = await findLatestRound();
+  if (latest) await maybeRunPostDrawNotifications(latest);
+  try {
+    await refreshLottoDetailSyncCache();
+  } catch (error) {
+    console.error(`sunday detail refresh failed (${note})`, error);
+  }
+  await writeLottoSyncMeta({
+    lastSuccessAt: new Date().toISOString(),
+    lastError: null,
+    note,
+  });
+}
+
 exports.scheduledLottoSyncSun0900 = onSchedule(
   { schedule: "0 9 * * 0", timeZone: "Asia/Seoul", region: "asia-northeast3" },
   async () => {
-    await refreshLottoFirestoreCaches();
-    const latest = await findLatestRound();
-    if (latest) await maybeRunPostDrawNotifications(latest);
-    await writeLottoSyncMeta({
-      lastSuccessAt: new Date().toISOString(),
-      lastError: null,
-      note: "sunday_0900_refresh",
-    });
+    await sundayRefreshAndNotify("sunday_0900_refresh");
   },
 );
 
 exports.scheduledLottoSyncSun2100 = onSchedule(
   { schedule: "0 21 * * 0", timeZone: "Asia/Seoul", region: "asia-northeast3" },
   async () => {
-    await refreshLottoFirestoreCaches();
-    const latest = await findLatestRound();
-    if (latest) await maybeRunPostDrawNotifications(latest);
-    await writeLottoSyncMeta({
-      lastSuccessAt: new Date().toISOString(),
-      lastError: null,
-      note: "sunday_2100_refresh",
-    });
+    await sundayRefreshAndNotify("sunday_2100_refresh");
+  },
+);
+
+/**
+ * 매일·토요 추첨전 참여 유도 푸시 (Cloud Scheduler 본선).
+ * GitHub Actions cron은 지연으로 시각 창을 빗나가므로 사용하지 않는다.
+ */
+async function runScheduledEngagement(campaignId, alsoDuePass = false) {
+  const { notifyEngagement } = await import("./lib/notifyEngagement.mjs");
+  const db = getAdminDb();
+  const messaging = getAdminMessaging();
+  const primary = await notifyEngagement({ db, messaging, campaignId });
+  console.log(
+    `scheduledEngagement ${campaignId}: sent=${primary.sent}, skipped=${primary.skipped}`,
+  );
+  if (!alsoDuePass) return primary;
+  const due = await notifyEngagement({ db, messaging });
+  console.log(`scheduledEngagement due-pass: sent=${due.sent}, skipped=${due.skipped}`);
+  return { primary, due };
+}
+
+exports.scheduledEngagementMorning = onSchedule(
+  {
+    schedule: "0 10 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 540,
+    memory: "512MiB",
+  },
+  async () => {
+    await runScheduledEngagement("daily-morning", true);
+  },
+);
+
+exports.scheduledEngagementEvening = onSchedule(
+  {
+    schedule: "0 20 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 540,
+    memory: "512MiB",
+  },
+  async () => {
+    await runScheduledEngagement("daily-evening", false);
+  },
+);
+
+exports.scheduledEngagementSatPre = onSchedule(
+  {
+    schedule: "0 18 * * 6",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 540,
+    memory: "512MiB",
+  },
+  async () => {
+    await runScheduledEngagement("sat-pre-draw", false);
   },
 );

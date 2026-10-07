@@ -169,8 +169,9 @@ export async function notifyDeviceWins(options) {
         result.failureCount > 0 &&
         result.responses[0]?.error?.code === "messaging/registration-token-not-registered"
       ) {
+        // 만료 토큰만 제거. engagementPushEnabled는 사용자 opt-out과 구분한다.
         await db.doc(`devices/${deviceId}`).set(
-          { engagementPushEnabled: false, updatedAt: new Date().toISOString() },
+          { fcmToken: null, updatedAt: new Date().toISOString() },
           { merge: true },
         );
       }

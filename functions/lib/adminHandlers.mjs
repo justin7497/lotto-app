@@ -566,6 +566,8 @@ export async function sendTestPush(db, messaging, admin, payload) {
       });
     } catch (error) {
       failure += 1;
+      const errorCode =
+        error && typeof error === "object" && "code" in error ? String(error.code) : "";
       const errorMessage = error instanceof Error ? error.message : String(error);
       errors.push(errorMessage);
       deliveries.push({
@@ -575,6 +577,22 @@ export async function sendTestPush(db, messaging, admin, payload) {
         ok: false,
         error: errorMessage,
       });
+
+      // 만료 토큰 정리 — 사용자 opt-out과 구분 (engagementPushEnabled는 유지)
+      const dead =
+        errorCode === "messaging/registration-token-not-registered" ||
+        /NotRegistered|registration-token-not-registered|unregistered/i.test(errorMessage);
+      if (dead) {
+        if (row.deviceId) {
+          await db.doc(`devices/${row.deviceId}`).set(
+            { fcmToken: null, updatedAt: new Date().toISOString() },
+            { merge: true },
+          );
+        }
+        if (row.source === "account" || !row.deviceId) {
+          await db.doc(`users/${admin.uid}/fcmTokens/${hashToken(row.token)}`).delete().catch(() => {});
+        }
+      }
     }
   }
 

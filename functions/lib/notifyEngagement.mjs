@@ -39,12 +39,102 @@ async function writeEngagementLog(db, deviceId, logDocId, meta) {
 }
 
 /**
+ * 만료 토큰만 제거. engagementPushEnabled는 건드리지 않음(사용자 opt-out과 구분).
+ * @param {import('firebase-admin/firestore').Firestore} db
+ * @param {string} deviceId
+ */
+async function clearDeadDeviceToken(db, deviceId) {
+  await db.doc(`devices/${deviceId}`).set(
+    { fcmToken: null, updatedAt: new Date().toISOString() },
+    { merge: true },
+  );
+}
+
+async function mapPool(items, limit, fn) {
+  const out = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      out[index] = await fn(items[index], index);
+    }
+  }
+  const workers = Math.min(limit, items.length);
+  await Promise.all(Array.from({ length: workers }, () => worker()));
+  return out;
+}
+
+/**
+ * 당첨번호 알림만 — 회차당 1회, 500대씩 한 번에 발송
+ * @param {{
+ *   db: import('firebase-admin/firestore').Firestore,
+ *   messaging: import('firebase-admin/messaging').Messaging,
+ *   devices: Array<{ id?: string, deviceId?: string, fcmToken: string }>,
+ *   campaign: { id: string, schedule: string, title: string, body: string, link: string },
+ *   round: { drwNo?: number },
+ *   dryRun?: boolean,
+ * }} options
+ */
+async function sendDrawNumberPush(options) {
+  const { db, messaging, devices, campaign, round, dryRun = false } = options;
+  const logId = engagementLogDocId(campaign, new Date(), round);
+  const payload = buildPushPayload(campaign, round);
+  const checks = await mapPool(devices, 24, async (device) => {
+    const deviceId = String(device.deviceId ?? device.id);
+    const already = await hasCampaignLog(db, deviceId, logId);
+    return already ? null : { deviceId, token: String(device.fcmToken) };
+  });
+  const eligible = checks.filter(Boolean);
+  console.log(
+    `draw-number push ${round.drwNo}회: devices=${devices.length}, toSend=${eligible.length}, log=${logId}`,
+  );
+  if (eligible.length === 0) {
+    return { sent: 0, skipped: devices.length };
+  }
+
+  let sent = 0;
+  for (let offset = 0; offset < eligible.length; offset += 500) {
+    const group = eligible.slice(offset, offset + 500);
+    if (dryRun) {
+      sent += group.length;
+      continue;
+    }
+    const result = await messaging.sendEachForMulticast({
+      tokens: group.map((item) => item.token),
+      ...payload,
+    });
+    await mapPool(group, 24, async (item, index) => {
+      const response = result.responses[index];
+      if (response?.success) {
+        sent += 1;
+        await writeEngagementLog(db, item.deviceId, logId, {
+          success: true,
+          campaignId: campaign.id,
+        });
+        return;
+      }
+      const code = response?.error?.code;
+      if (code === "messaging/registration-token-not-registered") {
+        await clearDeadDeviceToken(db, item.deviceId);
+      } else if (response?.error) {
+        console.warn(`  draw-number push failed → ${item.deviceId}: ${response.error.message}`);
+      }
+    });
+  }
+
+  console.log(`draw-number push done. sent=${sent}, skipped=${devices.length - eligible.length}`);
+  return { sent, skipped: devices.length - eligible.length };
+}
+
+/**
  * @param {{
  *   db: import('firebase-admin/firestore').Firestore,
  *   messaging: import('firebase-admin/messaging').Messaging,
  *   dryRun?: boolean,
  *   campaignId?: string | null,
  *   schedule?: string | null,
+ *   round?: { drwNo?: number, drwtNo1?: number, drwtNo2?: number, drwtNo3?: number, drwtNo4?: number, drwtNo5?: number, drwtNo6?: number, bnusNo?: number } | null,
  * }} options
  */
 export async function notifyEngagement(options) {
@@ -54,6 +144,7 @@ export async function notifyEngagement(options) {
     dryRun = false,
     campaignId = null,
     schedule = null,
+    round = null,
   } = options;
   const explicitCampaign = Boolean(campaignId);
   const now = new Date();
@@ -73,6 +164,17 @@ export async function notifyEngagement(options) {
   }
 
   const devices = await loadDevices(db);
+
+  if (explicitCampaign && campaignId === "sat-post-draw" && campaigns.length === 1 && round?.drwNo) {
+    return sendDrawNumberPush({
+      db,
+      messaging,
+      devices,
+      campaign: campaigns[0],
+      round,
+      dryRun,
+    });
+  }
   console.log(
     `notifyEngagement: ${devices.length} devices, campaigns=${campaigns.map((c) => c.id).join(",")}`,
   );
@@ -85,11 +187,11 @@ export async function notifyEngagement(options) {
     let pushed = false;
     for (const campaign of campaigns) {
       if (!explicitCampaign && !isCampaignDueForDevice(campaign, device, now)) continue;
-      const logId = engagementLogDocId(campaign, now);
+      const logId = engagementLogDocId(campaign, now, round);
       if (await hasCampaignLog(db, deviceId, logId)) continue;
 
       const token = String(device.fcmToken);
-      const payload = buildPushPayload(campaign);
+      const payload = buildPushPayload(campaign, round);
 
       if (dryRun) {
         console.log(`  [dry-run] ${deviceId} ← ${campaign.id} (${logId}): ${campaign.title}`);
@@ -119,10 +221,7 @@ export async function notifyEngagement(options) {
         if (result.failureCount > 0) {
           const err = result.responses[0]?.error;
           if (err?.code === "messaging/registration-token-not-registered") {
-            await db.doc(`devices/${deviceId}`).set(
-              { engagementPushEnabled: false, updatedAt: new Date().toISOString() },
-              { merge: true },
-            );
+            await clearDeadDeviceToken(db, deviceId);
           }
         }
       } catch (err) {

@@ -1,10 +1,13 @@
 /**
- * CLI: 비로그인 기기 참여 유도 푸시
- * 운영(추첨 후): Firebase Functions scheduledLottoSync → sat-post-draw
+ * CLI: 비로그인 기기 참여 유도 푸시 (수동·GHA 백업용)
+ *
+ * 본선 발송: Cloud Scheduler
+ *   scheduledEngagementMorning / Evening / SatPre
+ * 추첨 후: scheduledLottoSync → sat-post-draw
  *
  * 사용:
  *   node scripts/notify-engagement.mjs [--dry-run]
- *   node scripts/notify-engagement.mjs --campaign=sat-post-draw
+ *   node scripts/notify-engagement.mjs --campaign=daily-morning
  */
 import { resolve, dirname } from "node:path";
 import { readFileSync } from "node:fs";

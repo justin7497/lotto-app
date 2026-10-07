@@ -1,4 +1,9 @@
-# 비로그인 기기 대상 사용 유도 푸시 발송
+# 참여 유도 푸시 — 수동 백업 전용
+#
+# 본선 발송은 Cloud Scheduler (Functions):
+#   scheduledEngagementMorning  매일 10:00 KST  daily-morning + due(welcome/inactive)
+#   scheduledEngagementEvening  매일 20:00 KST  daily-evening
+#   scheduledEngagementSatPre   토요 18:00 KST  sat-pre-draw
 #
 # 필요한 GitHub Secrets:
 #   FIREBASE_SERVICE_ACCOUNT_JSON
@@ -8,24 +13,10 @@
 name: Engagement Push Notifications
 
 on:
-  schedule:
-    # 매일 10:00 KST = 01:00 UTC (welcome-d1, inactive-d3/d7)
-    - cron: "0 1 * * *"
-    # 매일 20:00 KST = 11:00 UTC (2회째 일일 발송)
-    - cron: "0 11 * * *"
-    # 토요 18:00 KST = 09:00 UTC (추첨 전 안내 — saturday-18kst만)
-    - cron: "0 9 * * 6"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/notify-engagement.yml"
-      - "scripts/notify-engagement.mjs"
-      - "scripts/lib/engagementCampaigns.mjs"
-      - "functions/lib/engagementCampaigns.mjs"
   workflow_dispatch:
     inputs:
       campaign:
-        description: "특정 캠페인만 발송 (비우면 해당 시각 due 캠페인)"
+        description: "특정 캠페인 id (예: daily-morning, daily-evening, sat-pre-draw). 비우면 due 캠페인만"
         required: false
         type: string
       dry_run:
@@ -75,14 +66,12 @@ jobs:
             echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON secret is not set."
             exit 1
           fi
-          ARGS=""
-          if [ -n "${{ github.event.inputs.campaign }}" ]; then
-            ARGS="$ARGS --campaign=${{ github.event.inputs.campaign }}"
-          fi
-          if [ "${{ github.event.schedule }}" = "0 9 * * 6" ]; then
-            ARGS="$ARGS --schedule=saturday-18kst"
-          fi
+          DRY=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            ARGS="$ARGS --dry-run"
+            DRY="--dry-run"
           fi
-          node scripts/notify-engagement.mjs $ARGS
+          if [ -n "${{ github.event.inputs.campaign }}" ]; then
+            node scripts/notify-engagement.mjs --campaign="${{ github.event.inputs.campaign }}" $DRY
+          else
+            node scripts/notify-engagement.mjs $DRY
+          fi
